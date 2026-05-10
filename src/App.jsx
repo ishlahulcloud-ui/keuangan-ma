@@ -120,8 +120,8 @@ function LoginPage(props) {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <img src={logoMts} alt="Logo MTs Ishlahul Amanah" className="w-20 h-20 mx-auto mb-4 object-contain" />
+          <div className="Flex justify-center mb-6">
+            <img src={logoMts} alt="Logo MTs Ishlahul Amanah" className="w-26 h-26 mx-auto mb-4 object-contain" />
           </div>
           <h1 className="text-2xl font-bold text-slate-800 mb-1">Sistem Keuangan</h1>
           <h2 className="text-lg font-semibold text-emerald-600 mb-1">MTs Ishlahul Amanah</h2>
