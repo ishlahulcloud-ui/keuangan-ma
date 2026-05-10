@@ -122,7 +122,7 @@ function LoginPage(props) {
             <Building className="w-9 h-9 text-emerald-600" />
           </div>
           <h1 className="text-2xl font-bold text-slate-800 mb-1">Sistem Keuangan</h1>
-          <h2 className="text-lg font-semibold text-emerald-600 mb-1">MA Ishlahul Amanah</h2>
+          <h2 className="text-lg font-semibold text-emerald-600 mb-1">MTs Ishlahul Amanah</h2>
           <p className="text-sm text-slate-500">Pangalengan, Kabupaten Bandung</p>
         </div>
         <div className="bg-slate-50 rounded-xl p-6 mb-6">
@@ -225,7 +225,7 @@ export default function App() {
   }
 
   function exportISAK() {
-    var r = '=== YAYASAN PENDIDIKAN MA ISHLAHUL AMANAH ===\nLAPORAN PENGHASILAN KOMPREHENSIF (ISAK 35)\n\n';
+    var r = '=== YAYASAN PENDIDIKAN MTs Ishlahul Amanah ===\nLAPORAN PENGHASILAN KOMPREHENSIF (ISAK 35)\n\n';
     r += 'I. PENDAPATAN TANPA PEMBATASAN\n';
     coa.filter(function (c) { return c.category === 'PENDAPATAN' && !String(c.code).startsWith('430'); }).forEach(function (c) { var a = transactions.filter(function (t) { return String(t.coa) === String(c.code) && t.restriction === 'unrestricted'; }).reduce(function (s, t) { return s + Number(t.amount); }, 0); if (a > 0) r += '  ' + c.name + ': Rp ' + fmtCurrency(a) + '\n'; });
     r += '  TOTAL: Rp ' + fmtCurrency(analytics.totalIn - analytics.totalInRestricted) + '\n\n';
@@ -249,7 +249,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex">
       <aside className="w-64 bg-slate-900 text-white flex-col hidden md:flex">
-        <div className="p-6 border-b border-slate-800"><div className="flex items-center gap-3"><Building className="w-8 h-8 text-emerald-500" /><div><h1 className="font-bold text-lg leading-tight">MA Ishlahul Amanah</h1><p className="text-xs text-slate-400">Sistem Keuangan Web</p></div></div></div>
+        <div className="p-6 border-b border-slate-800"><div className="flex items-center gap-3"><Building className="w-8 h-8 text-emerald-500" /><div><h1 className="font-bold text-lg leading-tight">MTs Ishlahul Amanah</h1><p className="text-xs text-slate-400">Sistem Keuangan Web</p></div></div></div>
         <nav className="flex-1 p-4 space-y-2">
           <NB icon={<LayoutDashboard />} label="Dashboard" a={tab === 'dashboard'} oc={function () { setTab('dashboard'); }} />
           <NB icon={<List />} label="Jurnal Umum" a={tab === 'jurnal'} oc={function () { setTab('jurnal'); }} />
@@ -344,7 +344,7 @@ export default function App() {
           {tab === 'isak' && <div className="space-y-6 max-w-5xl mx-auto">
             <div className="flex justify-between items-center"><h2 className="text-2xl font-bold">ISAK 35</h2><button onClick={exportISAK} className="px-4 py-2 bg-slate-700 text-white rounded-lg flex items-center gap-2"><FileBarChart className="w-4 h-4" />Export</button></div>
             <div className="bg-white p-8 rounded-xl shadow-sm border">
-              <div className="text-center border-b-2 border-slate-800 pb-4 mb-6"><h3 className="text-xl font-bold uppercase">Yayasan Pendidikan MA Ishlahul Amanah</h3><h4 className="text-lg font-semibold">Laporan Penghasilan Komprehensif</h4><p className="text-sm text-slate-500">Periode 2026 (ISAK 35)</p></div>
+              <div className="text-center border-b-2 border-slate-800 pb-4 mb-6"><h3 className="text-xl font-bold uppercase">Yayasan Pendidikan MTs Ishlahul Amanah</h3><h4 className="text-lg font-semibold">Laporan Penghasilan Komprehensif</h4><p className="text-sm text-slate-500">Periode 2026 (ISAK 35)</p></div>
               <div className="space-y-6">
                 <div><h5 className="font-bold mb-3 pb-2 border-b-2">I. PENDAPATAN TANPA PEMBATASAN</h5><div className="space-y-2 pl-4 text-sm">{coa.filter(function (c) { return c.category === 'PENDAPATAN' && !String(c.code).startsWith('430'); }).map(function (c) { var a = transactions.filter(function (t) { return String(t.coa) === String(c.code) && t.restriction === 'unrestricted'; }).reduce(function (s, t) { return s + Number(t.amount); }, 0); if (a === 0) return null; return <div key={c.code} className="flex justify-between py-1"><span>{c.name}</span><span className="font-mono">Rp {fmtCurrency(a)}</span></div>; })}<div className="flex justify-between font-bold pt-3 border-t-2 mt-3"><span>Total</span><span className="font-mono">Rp {fmtCurrency(analytics.totalIn - analytics.totalInRestricted)}</span></div></div></div>
                 <div><h5 className="font-bold mb-3 pb-2 border-b-2">II. PENDAPATAN DENGAN PEMBATASAN</h5><div className="space-y-2 pl-4 text-sm">{coa.filter(function (c) { return String(c.code).startsWith('430'); }).map(function (c) { var a = transactions.filter(function (t) { return String(t.coa) === String(c.code); }).reduce(function (s, t) { return s + Number(t.amount); }, 0); if (a === 0) return null; return <div key={c.code} className="flex justify-between py-1"><span>{c.name}</span><span className="font-mono">Rp {fmtCurrency(a)}</span></div>; })}<div className="flex justify-between font-bold pt-3 border-t-2 mt-3"><span>Total</span><span className="font-mono">Rp {fmtCurrency(analytics.totalInRestricted)}</span></div></div></div>
