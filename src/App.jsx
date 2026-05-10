@@ -121,7 +121,7 @@ function LoginPage(props) {
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Building <img src={logoMts} alt="Logo MTs Ishlahul Amanah" className="w-20 h-20 mx-auto mb-4 object-contain" />
+            <img src={logoMts} alt="Logo MTs Ishlahul Amanah" className="w-20 h-20 mx-auto mb-4 object-contain" />
           </div>
           <h1 className="text-2xl font-bold text-slate-800 mb-1">Sistem Keuangan</h1>
           <h2 className="text-lg font-semibold text-emerald-600 mb-1">MTs Ishlahul Amanah</h2>
@@ -251,7 +251,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex">
       <aside className="w-64 bg-slate-900 text-white flex-col hidden md:flex">
-        <div className="p-6 border-b border-slate-800"><div className="flex items-center gap-3"><Building className="w-8 h-8 text-emerald-500" /><div><h1 className="font-bold text-lg leading-tight">MTs Ishlahul Amanah</h1><p className="text-xs text-slate-400">Sistem Keuangan Web</p></div></div></div>
+        <div className="p-6 border-b border-slate-800"><div className="flex items-center gap-3"><img src={logoMts} alt="Logo MTs" className="w-8 h-8 mr-3 object-contain" />
+<div><h1 className="font-bold text-lg leading-tight">MTs Ishlahul Amanah</h1><p className="text-xs text-slate-400">Sistem Keuangan Web</p></div></div></div>
         <nav className="flex-1 p-4 space-y-2">
           <NB icon={<LayoutDashboard />} label="Dashboard" a={tab === 'dashboard'} oc={function () { setTab('dashboard'); }} />
           <NB icon={<List />} label="Jurnal Umum" a={tab === 'jurnal'} oc={function () { setTab('jurnal'); }} />
