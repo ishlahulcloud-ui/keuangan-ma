@@ -121,7 +121,7 @@ function LoginPage(props) {
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
         <div className="text-center mb-8">
           <div className="Flex justify-center mb-6">
-            <img src={logoMts} alt="Logo MTs Ishlahul Amanah" className="w-26 h-26 mx-auto mb-4 object-contain" />
+            <img src={logoMts} alt="Logo MTs Ishlahul Amanah" className="w-24 h-24 object-contain" />
           </div>
           <h1 className="text-2xl font-bold text-slate-800 mb-1">Sistem Keuangan</h1>
           <h2 className="text-lg font-semibold text-emerald-600 mb-1">MTs Ishlahul Amanah</h2>
