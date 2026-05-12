@@ -157,6 +157,10 @@ export default function App() {
   var [online, setOnline] = useState(true);
   var [sync, setSync] = useState('synced');
   var [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], ref: '', desc: '', coa: '4100', rkam: '', amount: '', restriction: 'unrestricted', docRef: '', approvedBy: '' });
+// Tambahkan di baris state (sekitar baris 150)
+  var [students, setStudents] = useState([]);
+  var [billings, setBillings] = useState([]);
+  var [selectedStudent, setSelectedStudent] = useState(null); // Untuk modal penyesuaian tarif
 
   useEffect(function () {
     var saved = localStorage.getItem('madrasah_user');
@@ -176,13 +180,29 @@ export default function App() {
   function handleLogout() { setUser(null); setRole('viewer'); setTransactions([]); setCoa([]); setRkam([]); currentUserEmail = ''; localStorage.removeItem('madrasah_user'); if (window.google && window.google.accounts) window.google.accounts.id.disableAutoSelect(); }
 
   async function loadData() {
-    setLoading(true); setSync('syncing');
-    try {
-      var r = await Promise.all([apiGet('getTransactions', { quarter: 'all', restriction: 'all' }), apiGet('getCOA'), apiGet('getRKAM'), apiGet('getUserRole', { email: currentUserEmail })]);
-      setTransactions(r[0] || []); setCoa(r[1] || []); setRkam(r[2] || []);
-      setRole((r[3] && r[3].role) || AUTHORIZED_USERS[currentUserEmail] || 'viewer'); setSync('synced');
-    } catch (err) { setSync('error'); alert('Gagal memuat data: ' + err.message); } finally { setLoading(false); }
-  }
+  setLoading(true); setSync('syncing');
+  try {
+    var r = await Promise.all([
+      apiGet('getTransactions', { quarter: 'all', restriction: 'all' }),
+      apiGet('getCOA'),
+      apiGet('getRKAM'),
+      apiGet('getUserRole', { email: currentUserEmail }),
+      apiGet('getStudents'), // Ambil data siswa
+      apiGet('getBillings')  // Ambil data billing
+    ]);
+    setTransactions(r[0] || []);
+    setCoa(r[1] || []);
+    setRkam(r[2] || []);
+    setRole((r[3] && r[3].role) || AUTHORIZED_USERS[currentUserEmail] || 'viewer');
+    setStudents(r[4] || []);
+    setBillings(r[5] || []);
+    setSync('synced');
+  } catch (err) { 
+    setSync('error');
+    console.error(err);
+  } finally { setLoading(false); }
+}
+
 
   async function refreshTx() { setSync('syncing'); try { var d = await apiGet('getTransactions', { quarter: 'all', restriction: 'all' }); setTransactions(d || []); setSync('synced'); } catch (e) { setSync('error'); } }
 
@@ -221,6 +241,19 @@ export default function App() {
     } catch (err) { setSync('error'); alert('Gagal: ' + err.message); }
   }
 
+  async function handleUpdateRate(studentId, newRate, reason) {
+  setSync('syncing');
+  try {
+    await apiPost('updateStudentRate', { 
+      data: { studentId, customSpp: Number(newRate), discountReason: reason } 
+    });
+    alert("Tarif khusus berhasil diterapkan!");
+    await loadData(); // Refresh data
+  } catch (err) {
+    alert("Gagal update tarif: " + err.message);
+  }
+}
+
   function exportCSV() {
     var h = ['Tanggal', 'Ref', 'Deskripsi', 'Akun', 'Debet', 'Kredit', 'Status'];
     var rows = transactions.map(function (t) { var c = coa.find(function (x) { return String(x.code) === String(t.coa); }); return [t.date, t.ref, '"' + t.desc + '"', c ? c.name : t.coa, t.type === 'IN' ? t.amount : '', t.type === 'OUT' ? t.amount : '', t.restriction === 'unrestricted' ? 'Bebas' : 'Terikat']; });
@@ -258,6 +291,7 @@ export default function App() {
         <nav className="flex-1 p-4 space-y-2">
           <NB icon={<LayoutDashboard />} label="Dashboard" a={tab === 'dashboard'} oc={function () { setTab('dashboard'); }} />
           <NB icon={<List />} label="Jurnal Umum" a={tab === 'jurnal'} oc={function () { setTab('jurnal'); }} />
+          <NB icon={<Users />} label="Data Siswa" a={tab === 'students'} oc={function () { setTab('students'); }} />
           <NB icon={<Activity />} label="Monitoring RKAM" a={tab === 'rkam'} oc={function () { setTab('rkam'); }} />
           <NB icon={<TrendingUp />} label="Proyeksi Kas" a={tab === 'cashflow'} oc={function () { setTab('cashflow'); }} />
           <NB icon={<DollarSign />} label="Dana Terikat" a={tab === 'restricted'} oc={function () { setTab('restricted'); }} />
@@ -318,6 +352,69 @@ export default function App() {
                 {role !== 'viewer' && <button onClick={function () { setShowForm(!showForm); }} className="px-4 py-2 bg-emerald-600 text-white rounded-lg flex items-center gap-2"><Plus className="w-4 h-4" />Entri</button>}
               </div>
             </div>
+
+          {tab === 'students' && (
+            <div className="space-y-6 max-w-7xl mx-auto">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold">Manajemen Siswa & Piutang</h2>
+                <div className="flex gap-2">
+                  <button className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm flex items-center gap-2">
+                    <Plus className="w-4 h-4" />Tambah Siswa
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-slate-50 border-b">
+                      <tr>
+                        <th className="p-4 font-semibold">NIS</th>
+                        <th className="p-4 font-semibold">Nama Siswa</th>
+                        <th className="p-4 font-semibold">Kelas</th>
+                        <th className="p-4 font-semibold">Kategori</th>
+                        <th className="p-4 font-semibold text-right">Tarif SPP</th>
+                        <th className="p-4 font-semibold text-right text-rose-600">Total Piutang</th>
+                        <th className="p-4 font-semibold text-center">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {students.map((s, i) => {
+                        // Hitung piutang dari data billing secara otomatis
+                        const studentBills = billings.filter(b => b.studentId === s.studentId && b.status !== 'LUNAS');
+                        const totalDebt = studentBills.reduce((acc, curr) => acc + (Number(curr.amountDue) - Number(curr.amountPaid)), 0);
+                        
+                        return (
+                          <tr key={i} className="hover:bg-slate-50">
+                            <td className="p-4 font-mono text-xs">{s.studentId}</td>
+                            <td className="p-4 font-medium">{s.name}</td>
+                            <td className="p-4">{s.class}</td>
+                            <td className="p-4">
+                              <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${s.customSpp ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                                {s.category || 'Reguler'}
+                              </span>
+                            </td>
+                            <td className="p-4 text-right">Rp {fmtCurrency(s.customSpp || s.baseSpp)}</td>
+                            <td className="p-4 text-right font-bold text-rose-600">Rp {fmtCurrency(totalDebt)}</td>
+                            <td className="p-4 text-center">
+                              <button 
+                                onClick={() => setSelectedStudent(s)}
+                                className="p-2 hover:bg-slate-100 rounded-lg text-emerald-600"
+                                title="Penyesuaian Tarif"
+                              >
+                                <Activity className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+            
             
             {showForm && role !== 'viewer' && <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border grid grid-cols-1 md:grid-cols-3 gap-4">
               <div><label className="block text-sm font-medium mb-1">Tanggal</label><input type="date" name="date" value={form.date} onChange={handleInput} required className="w-full p-2 border rounded-md" /></div>
