@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 
 import logoMts from './assets/logo-mts.png';
+import { PrintReceiptButton } from './components/PrintReceipt';
+import { LaporanBulananButton } from './components/LaporanBulananPDF';
 
 // ============================================================================
 // KONFIGURASI
@@ -120,7 +122,7 @@ function LoginPage(props) {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
         <div className="text-center mb-8">
-          <div className="Flex justify-center mb-6">
+          <div className="flex justify-center mb-6">
             <img src={logoMts} alt="Logo MTs Ishlahul Amanah" className="w-24 h-24 object-contain" />
           </div>
           <h1 className="text-2xl font-bold text-slate-800 mb-1">Sistem Keuangan</h1>
@@ -252,7 +254,7 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex">
       <aside className="w-64 bg-slate-900 text-white flex-col hidden md:flex">
         <div className="p-6 border-b border-slate-800"><div className="flex items-center gap-3"><img src={logoMts} alt="Logo MTs" className="w-8 h-8 mr-3 object-contain" />
-<div><h1 className="font-bold text-lg leading-tight">MTs Ishlahul Amanah</h1><p className="text-xs text-slate-400">Sistem Keuangan Web</p></div></div></div>
+        <div><h1 className="font-bold text-lg leading-tight">MTs Ishlahul Amanah</h1><p className="text-xs text-slate-400">Sistem Keuangan Web</p></div></div></div>
         <nav className="flex-1 p-4 space-y-2">
           <NB icon={<LayoutDashboard />} label="Dashboard" a={tab === 'dashboard'} oc={function () { setTab('dashboard'); }} />
           <NB icon={<List />} label="Jurnal Umum" a={tab === 'jurnal'} oc={function () { setTab('jurnal'); }} />
@@ -309,10 +311,14 @@ export default function App() {
             <div className="flex flex-wrap justify-between items-center gap-4">
               <h2 className="text-2xl font-bold">Jurnal Umum</h2>
               <div className="flex gap-2">
-                <button onClick={exportCSV} className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2 text-sm"><Download className="w-4 h-4" />CSV</button>
+                <button onClick={exportCSV} className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2 text-sm">
+                  <Download className="w-4 h-4" />CSV
+                </button>
+                <LaporanBulananButton transactions={transactions} coaList={coa} rkamList={rkam} institution="MTs Ishlahul Amanah" userRole={role} userName={user.name} />
                 {role !== 'viewer' && <button onClick={function () { setShowForm(!showForm); }} className="px-4 py-2 bg-emerald-600 text-white rounded-lg flex items-center gap-2"><Plus className="w-4 h-4" />Entri</button>}
               </div>
             </div>
+            
             {showForm && role !== 'viewer' && <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border grid grid-cols-1 md:grid-cols-3 gap-4">
               <div><label className="block text-sm font-medium mb-1">Tanggal</label><input type="date" name="date" value={form.date} onChange={handleInput} required className="w-full p-2 border rounded-md" /></div>
               <div><label className="block text-sm font-medium mb-1">No Ref</label><input type="text" name="ref" value={form.ref} onChange={handleInput} placeholder="INV-001" required className="w-full p-2 border rounded-md" /></div>
@@ -324,8 +330,45 @@ export default function App() {
               <div><label className="block text-sm font-medium mb-1">Dok Ref</label><input type="text" name="docRef" value={form.docRef} onChange={handleInput} className="w-full p-2 border rounded-md" /></div>
               <div className="md:col-span-3 flex justify-end gap-2 mt-2"><button type="button" onClick={function () { setShowForm(false); }} className="px-6 py-2 border rounded-md">Batal</button><button type="submit" className="px-6 py-2 bg-slate-800 text-white rounded-md font-medium">Simpan</button></div>
             </form>}
-            <div className="bg-white rounded-xl shadow-sm border overflow-hidden"><div className="overflow-x-auto"><table className="w-full text-left text-sm whitespace-nowrap"><thead className="bg-slate-50 border-b"><tr><th className="p-4 font-semibold">Tanggal</th><th className="p-4 font-semibold">Ref</th><th className="p-4 font-semibold">Deskripsi</th><th className="p-4 font-semibold">Akun</th><th className="p-4 font-semibold text-right">Debet</th><th className="p-4 font-semibold text-right">Kredit</th><th className="p-4 font-semibold text-center">Status</th></tr></thead>
-            <tbody className="divide-y">{transactions.slice().reverse().map(function (t, i) { var ci = coa.find(function (c) { return String(c.code) === String(t.coa); }); var isR = t.restriction && t.restriction !== 'unrestricted'; return (<tr key={i} className={'hover:bg-slate-50 ' + (isR ? 'bg-amber-50' : '')}><td className="p-4">{t.date}</td><td className="p-4 text-slate-500 font-mono text-xs">{t.ref}</td><td className="p-4 font-medium">{t.desc}{t.rkam && <span className="text-xs bg-slate-100 px-2 py-1 rounded ml-2">{t.rkam}</span>}</td><td className="p-4 text-xs">{ci ? ci.name : t.coa}</td><td className="p-4 text-right text-emerald-600 font-medium">{t.type === 'IN' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td><td className="p-4 text-right text-rose-600 font-medium">{t.type === 'OUT' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td><td className="p-4 text-center">{isR ? <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">Terikat</span> : <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Bebas</span>}</td></tr>); })}</tbody></table></div></div>
+            
+            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="bg-slate-50 border-b">
+                    <tr>
+                      <th className="p-4 font-semibold">Tanggal</th>
+                      <th className="p-4 font-semibold">Ref</th>
+                      <th className="p-4 font-semibold">Deskripsi</th>
+                      <th className="p-4 font-semibold">Akun</th>
+                      <th className="p-4 font-semibold text-right">Debet</th>
+                      <th className="p-4 font-semibold text-right">Kredit</th>
+                      <th className="p-4 font-semibold text-center">Status</th>
+                      <th className="p-4 font-semibold text-center">Resi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {transactions.slice().reverse().map(function (t, i) { 
+                      var ci = coa.find(function (c) { return String(c.code) === String(t.coa); }); 
+                      var isR = t.restriction && t.restriction !== 'unrestricted'; 
+                      return (
+                        <tr key={i} className={'hover:bg-slate-50 ' + (isR ? 'bg-amber-50' : '')}>
+                          <td className="p-4">{t.date}</td>
+                          <td className="p-4 text-slate-500 font-mono text-xs">{t.ref}</td>
+                          <td className="p-4 font-medium">{t.desc}{t.rkam && <span className="text-xs bg-slate-100 px-2 py-1 rounded ml-2">{t.rkam}</span>}</td>
+                          <td className="p-4 text-xs">{ci ? ci.name : t.coa}</td>
+                          <td className="p-4 text-right text-emerald-600 font-medium">{t.type === 'IN' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td>
+                          <td className="p-4 text-right text-rose-600 font-medium">{t.type === 'OUT' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td>
+                          <td className="p-4 text-center">{isR ? <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">Terikat</span> : <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Bebas</span>}</td>
+                          <td className="p-4 text-center">
+                            {t.type === 'IN' && <PrintReceiptButton transaction={t} institution="MTs Ishlahul Amanah" />}
+                          </td>
+                        </tr>
+                      ); 
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>}
 
           {tab === 'rkam' && <div className="space-y-6 max-w-6xl mx-auto"><h2 className="text-2xl font-bold">Monitoring RKAM</h2><div className="bg-white p-6 rounded-xl shadow-sm border"><div className="h-80 mb-8"><ResponsiveContainer><BarChart data={analytics.rkamData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="code" /><YAxis tickFormatter={function (v) { return (v / 1000000) + 'M'; }} /><RechartsTooltip formatter={function (v) { return 'Rp ' + fmtCurrency(v); }} /><Legend /><Bar dataKey="budget" name="Pagu" fill="#cbd5e1" radius={[4, 4, 0, 0]} /><Bar dataKey="realization" name="Realisasi" fill="#10b981" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div>
@@ -365,4 +408,3 @@ export default function App() {
 
 function NB(p) { return <button onClick={p.oc} className={'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition text-sm font-medium ' + (p.a ? 'bg-emerald-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white')}>{p.icon}{p.label}</button>; }
 function CD(p) { return <div className="bg-white p-6 rounded-xl shadow-sm border"><div className="flex justify-between items-start mb-4"><div className="p-3 bg-slate-50 rounded-lg border">{p.ic}</div></div><p className="text-sm text-slate-500 font-medium mb-1">{p.t}</p><h4 className="text-2xl font-bold text-slate-800">{p.v}</h4>{p.s && <p className="text-xs text-slate-400 mt-2">{p.s}</p>}</div>; }
-// updated
