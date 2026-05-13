@@ -156,7 +156,9 @@ export default function App() {
   var [loading, setLoading] = useState(false);
   var [online, setOnline] = useState(true);
   var [sync, setSync] = useState('synced');
-  var [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], ref: '', desc: '', coa: '4100', rkam: '', amount: '', restriction: 'unrestricted', docRef: '', approvedBy: '' });
+  var [form, setForm] = useState({date: new Date().toISOString().split('T')[0], ref: '', desc: '', coa: '4100', rkam: '', amount: '', restriction: 'unrestricted', docRef: '', approvedBy: '', studentId: '' // <-- Tambahan ini
+});
+
   
   var [students, setStudents] = useState([]);
   var [billings, setBillings] = useState([]);
@@ -234,13 +236,23 @@ export default function App() {
     if (!form.amount || Number(form.amount) <= 0) { alert('Nominal harus diisi'); return; }
     if (role === 'viewer') { alert('Viewer tidak dapat menambah transaksi'); return; }
     setSync('syncing');
-    try {
+        try {
       var ci = coa.find(function (c) { return String(c.code) === String(form.coa); });
-      await apiPost('addTransaction', { data: { date: form.date, ref: form.ref, desc: form.desc, coa: form.coa, rkam: form.rkam, type: ci && ci.category === 'PENDAPATAN' ? 'IN' : 'OUT', amount: Number(form.amount), restriction: form.restriction, docRef: form.docRef, approvedBy: form.approvedBy || user.name, quarter: getQuarter(form.date) } });
+      await apiPost('addTransaction', { 
+        data: { 
+          date: form.date, ref: form.ref, desc: form.desc, coa: form.coa, 
+          rkam: form.rkam, type: ci && ci.category === 'PENDAPATAN' ? 'IN' : 'OUT', 
+          amount: Number(form.amount), restriction: form.restriction, docRef: form.docRef, 
+          approvedBy: form.approvedBy || user.name, quarter: getQuarter(form.date),
+          studentId: form.studentId // <-- Mengirim ID Siswa ke Apps Script
+        } 
+      });
       await refreshTx(); setShowForm(false);
-      setForm({ date: new Date().toISOString().split('T')[0], ref: '', desc: '', coa: '4100', rkam: '', amount: '', restriction: 'unrestricted', docRef: '', approvedBy: '' });
+      // Mereset form kembali kosong termasuk studentId
+      setForm({ date: new Date().toISOString().split('T')[0], ref: '', desc: '', coa: '4100', rkam: '', amount: '', restriction: 'unrestricted', docRef: '', approvedBy: '', studentId: '' });
       setSync('synced'); alert('Transaksi berhasil!');
     } catch (err) { setSync('error'); alert('Gagal: ' + err.message); }
+
   }
 
   // eslint-disable-next-line no-unused-vars
@@ -358,17 +370,32 @@ export default function App() {
                 </div>
               </div>
               
-              {showForm && role !== 'viewer' && <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div><label className="block text-sm font-medium mb-1">Tanggal</label><input type="date" name="date" value={form.date} onChange={handleInput} required className="w-full p-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">No Ref</label><input type="text" name="ref" value={form.ref} onChange={handleInput} placeholder="INV-001" required className="w-full p-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">Akun</label><select name="coa" value={form.coa} onChange={handleInput} className="w-full p-2 border rounded-md">{coa.map(function (c) { return <option key={c.code} value={c.code}>[{c.code}] {c.name}</option>; })}</select></div>
-                <div className="md:col-span-2"><label className="block text-sm font-medium mb-1">Deskripsi</label><input type="text" name="desc" value={form.desc} onChange={handleInput} required className="w-full p-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">Nominal (Rp)</label><input type="number" name="amount" value={form.amount} onChange={handleInput} required min="1" className="w-full p-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">RKAM</label><select name="rkam" value={form.rkam} onChange={handleInput} className="w-full p-2 border rounded-md"><option value="">--</option>{rkam.map(function (r) { return <option key={r.code} value={r.code}>[{r.code}] {r.name}</option>; })}</select></div>
-                <div><label className="block text-sm font-medium mb-1">Pembatasan</label><select name="restriction" value={form.restriction} onChange={handleInput} className="w-full p-2 border rounded-md"><option value="unrestricted">Tidak Terikat</option><option value="restricted-scholarship">Beasiswa</option><option value="restricted-infrastructure">Infrastruktur</option></select></div>
-                <div><label className="block text-sm font-medium mb-1">Dok Ref</label><input type="text" name="docRef" value={form.docRef} onChange={handleInput} className="w-full p-2 border rounded-md" /></div>
-                <div className="md:col-span-3 flex justify-end gap-2 mt-2"><button type="button" onClick={function () { setShowForm(false); }} className="px-6 py-2 border rounded-md">Batal</button><button type="submit" className="px-6 py-2 bg-slate-800 text-white rounded-md font-medium">Simpan</button></div>
-              </form>}
+                          {showForm && role !== 'viewer' && <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div><label className="block text-sm font-medium mb-1">Tanggal</label><input type="date" name="date" value={form.date} onChange={handleInput} required className="w-full p-2 border rounded-md" /></div>
+              <div><label className="block text-sm font-medium mb-1">No Ref</label><input type="text" name="ref" value={form.ref} onChange={handleInput} placeholder="INV-001" required className="w-full p-2 border rounded-md" /></div>
+              <div><label className="block text-sm font-medium mb-1">Akun</label><select name="coa" value={form.coa} onChange={handleInput} className="w-full p-2 border rounded-md">{coa.map(function (c) { return <option key={c.code} value={c.code}>[{c.code}] {c.name}</option>; })}</select></div>
+              
+              {/* DROPDOWN SISWA BARU DI SINI */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Siswa (Opsional)</label>
+                <select name="studentId" value={form.studentId} onChange={handleInput} className="w-full p-2 border rounded-md">
+                  <option value="">-- Pilih Siswa --</option>
+                  {students.map(function (s) { 
+                    return <option key={s.studentId} value={s.studentId}>{s.name} ({s.class})</option>; 
+                  })}
+                </select>
+              </div>
+
+              <div className="md:col-span-2"><label className="block text-sm font-medium mb-1">Deskripsi</label><input type="text" name="desc" value={form.desc} onChange={handleInput} required className="w-full p-2 border rounded-md" /></div>
+              
+              <div><label className="block text-sm font-medium mb-1">Nominal (Rp)</label><input type="number" name="amount" value={form.amount} onChange={handleInput} required min="1" className="w-full p-2 border rounded-md" /></div>
+              <div><label className="block text-sm font-medium mb-1">RKAM</label><select name="rkam" value={form.rkam} onChange={handleInput} className="w-full p-2 border rounded-md"><option value="">--</option>{rkam.map(function (r) { return <option key={r.code} value={r.code}>[{r.code}] {r.name}</option>; })}</select></div>
+              <div><label className="block text-sm font-medium mb-1">Pembatasan</label><select name="restriction" value={form.restriction} onChange={handleInput} className="w-full p-2 border rounded-md"><option value="unrestricted">Tidak Terikat</option><option value="restricted-scholarship">Beasiswa</option><option value="restricted-infrastructure">Infrastruktur</option></select></div>
+              
+              <div><label className="block text-sm font-medium mb-1">Dok Ref</label><input type="text" name="docRef" value={form.docRef} onChange={handleInput} className="w-full p-2 border rounded-md" /></div>
+              <div className="md:col-span-2 flex justify-end gap-2 mt-6"><button type="button" onClick={function () { setShowForm(false); }} className="px-6 py-2 border rounded-md">Batal</button><button type="submit" className="px-6 py-2 bg-slate-800 text-white rounded-md font-medium">Simpan</button></div>
+            </form>}
+
               
               <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
                 <div className="overflow-x-auto">
