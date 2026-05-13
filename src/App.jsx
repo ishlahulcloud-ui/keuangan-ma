@@ -18,7 +18,7 @@ import { LaporanBulananButton } from './components/LaporanBulananPDF';
 // KONFIGURASI
 // ============================================================================
 
-var API_URL = 'https://script.google.com/macros/s/AKfycbzNvajqiPi169u-IQ4R2wdffVQvk3vxU_y-YfiPM6r92CkUfEd0MmTvBk4oMcfMbQA/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycby6YEPYvaVHFkM6TJ3hNxBYow1vYS_wOdc7W0tathGa0x0-yOYaCAVU17rVBdJ204V-/exec';
 var GOOGLE_CLIENT_ID = '1007043166010-rtbc31cshotnq5vlqtjdgf022vfkvt5b.apps.googleusercontent.com';
 var COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#6366f1', '#8b5cf6', '#ec4899'];
 
