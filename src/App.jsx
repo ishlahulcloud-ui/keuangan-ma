@@ -157,10 +157,12 @@ export default function App() {
   var [online, setOnline] = useState(true);
   var [sync, setSync] = useState('synced');
   var [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], ref: '', desc: '', coa: '4100', rkam: '', amount: '', restriction: 'unrestricted', docRef: '', approvedBy: '' });
-// Tambahkan di baris state (sekitar baris 150)
+  
   var [students, setStudents] = useState([]);
   var [billings, setBillings] = useState([]);
-  var [selectedStudent, setSelectedStudent] = useState(null); // Untuk modal penyesuaian tarif
+  
+  // eslint-disable-next-line no-unused-vars
+  var [selectedStudent, setSelectedStudent] = useState(null); 
 
   useEffect(function () {
     var saved = localStorage.getItem('madrasah_user');
@@ -180,29 +182,29 @@ export default function App() {
   function handleLogout() { setUser(null); setRole('viewer'); setTransactions([]); setCoa([]); setRkam([]); currentUserEmail = ''; localStorage.removeItem('madrasah_user'); if (window.google && window.google.accounts) window.google.accounts.id.disableAutoSelect(); }
 
   async function loadData() {
-  setLoading(true); setSync('syncing');
-  try {
-    var r = await Promise.all([
-      apiGet('getTransactions', { quarter: 'all', restriction: 'all' }),
-      apiGet('getCOA'),
-      apiGet('getRKAM'),
-      apiGet('getUserRole', { email: currentUserEmail }),
-      apiGet('getStudents'), // Ambil data siswa
-      apiGet('getBillings')  // Ambil data billing
-    ]);
-    setTransactions(r[0] || []);
-    setCoa(r[1] || []);
-    setRkam(r[2] || []);
-    setRole((r[3] && r[3].role) || AUTHORIZED_USERS[currentUserEmail] || 'viewer');
-    setStudents(r[4] || []);
-    setBillings(r[5] || []);
-    setSync('synced');
-  } catch (err) { 
-    setSync('error');
-    console.error(err);
-  } finally { setLoading(false); }
-}
-
+    setLoading(true); setSync('syncing');
+    try {
+      var r = await Promise.all([
+        apiGet('getTransactions', { quarter: 'all', restriction: 'all' }),
+        apiGet('getCOA'),
+        apiGet('getRKAM'),
+        apiGet('getUserRole', { email: currentUserEmail }),
+        apiGet('getStudents'), 
+        apiGet('getBillings')  
+      ]);
+      setTransactions(r[0] || []);
+      setCoa(r[1] || []);
+      setRkam(r[2] || []);
+      setRole((r[3] && r[3].role) || AUTHORIZED_USERS[currentUserEmail] || 'viewer');
+      setStudents(r[4] || []);
+      setBillings(r[5] || []);
+      setSync('synced');
+    } catch (err) { 
+      setSync('error');
+      alert ("Gagal menarik data dari Google! Pesan Error: " + err.message);
+      console.error(err);
+    } finally { setLoading(false); }
+  }
 
   async function refreshTx() { setSync('syncing'); try { var d = await apiGet('getTransactions', { quarter: 'all', restriction: 'all' }); setTransactions(d || []); setSync('synced'); } catch (e) { setSync('error'); } }
 
@@ -241,18 +243,19 @@ export default function App() {
     } catch (err) { setSync('error'); alert('Gagal: ' + err.message); }
   }
 
+  // eslint-disable-next-line no-unused-vars
   async function handleUpdateRate(studentId, newRate, reason) {
-  setSync('syncing');
-  try {
-    await apiPost('updateStudentRate', { 
-      data: { studentId, customSpp: Number(newRate), discountReason: reason } 
-    });
-    alert("Tarif khusus berhasil diterapkan!");
-    await loadData(); // Refresh data
-  } catch (err) {
-    alert("Gagal update tarif: " + err.message);
+    setSync('syncing');
+    try {
+      await apiPost('updateStudentRate', { 
+        data: { studentId, customSpp: Number(newRate), discountReason: reason } 
+      });
+      alert("Tarif khusus berhasil diterapkan!");
+      await loadData(); 
+    } catch (err) {
+      alert("Gagal update tarif: " + err.message);
+    }
   }
-}
 
   function exportCSV() {
     var h = ['Tanggal', 'Ref', 'Deskripsi', 'Akun', 'Debet', 'Kredit', 'Status'];
@@ -316,8 +319,8 @@ export default function App() {
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         <header className="bg-white border-b p-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <h2 className="text-xl font-bold hidden md:block">{tab === 'dashboard' ? 'Dashboard' : tab === 'jurnal' ? 'Jurnal Umum' : tab === 'rkam' ? 'RKAM' : tab === 'cashflow' ? 'Proyeksi Kas' : tab === 'restricted' ? 'Dana Terikat' : 'ISAK 35'}</h2>
-            <select className="md:hidden bg-slate-100 text-sm rounded p-2" value={tab} onChange={function (e) { setTab(e.target.value); }}><option value="dashboard">Dashboard</option><option value="jurnal">Jurnal</option><option value="rkam">RKAM</option><option value="cashflow">Kas</option><option value="restricted">Dana Terikat</option><option value="isak">ISAK 35</option></select>
+            <h2 className="text-xl font-bold hidden md:block">{tab === 'dashboard' ? 'Dashboard' : tab === 'jurnal' ? 'Jurnal Umum' : tab === 'students' ? 'Manajemen Siswa' : tab === 'rkam' ? 'RKAM' : tab === 'cashflow' ? 'Proyeksi Kas' : tab === 'restricted' ? 'Dana Terikat' : 'ISAK 35'}</h2>
+            <select className="md:hidden bg-slate-100 text-sm rounded p-2" value={tab} onChange={function (e) { setTab(e.target.value); }}><option value="dashboard">Dashboard</option><option value="jurnal">Jurnal</option><option value="students">Siswa</option><option value="rkam">RKAM</option><option value="cashflow">Kas</option><option value="restricted">Dana Terikat</option><option value="isak">ISAK 35</option></select>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={refreshTx} className="p-2 hover:bg-slate-100 rounded-lg"><RefreshCw className={'w-5 h-5 text-slate-600 ' + (sync === 'syncing' ? 'animate-spin' : '')} /></button>
@@ -341,18 +344,74 @@ export default function App() {
             <div className="bg-white p-6 rounded-xl shadow-sm border"><h3 className="font-bold mb-4">Tren Kas Kuartalan</h3><div className="h-64"><ResponsiveContainer><AreaChart data={analytics.cashFlow}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="quarter" /><YAxis tickFormatter={function (v) { return (v / 1000000) + 'M'; }} /><RechartsTooltip formatter={function (v) { return 'Rp ' + fmtCurrency(v); }} /><Legend /><Area type="monotone" dataKey="masuk" stackId="1" stroke="#10b981" fill="#10b981" name="Masuk" /><Area type="monotone" dataKey="keluar" stackId="2" stroke="#ef4444" fill="#ef4444" name="Keluar" /></AreaChart></ResponsiveContainer></div></div>
           </div>}
 
-          {tab === 'jurnal' && <div className="space-y-6 max-w-7xl mx-auto">
-            <div className="flex flex-wrap justify-between items-center gap-4">
-              <h2 className="text-2xl font-bold">Jurnal Umum</h2>
-              <div className="flex gap-2">
-                <button onClick={exportCSV} className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2 text-sm">
-                  <Download className="w-4 h-4" />CSV
-                </button>
-                <LaporanBulananButton transactions={transactions} coaList={coa} rkamList={rkam} institution="MTs Ishlahul Amanah" userRole={role} userName={user.name} />
-                {role !== 'viewer' && <button onClick={function () { setShowForm(!showForm); }} className="px-4 py-2 bg-emerald-600 text-white rounded-lg flex items-center gap-2"><Plus className="w-4 h-4" />Entri</button>}
+          {/* HALAMAN JURNAL UMUM YANG SUDAH DIPERBAIKI */}
+          {tab === 'jurnal' && (
+            <div className="space-y-6 max-w-7xl mx-auto">
+              <div className="flex flex-wrap justify-between items-center gap-4">
+                <h2 className="text-2xl font-bold">Jurnal Umum</h2>
+                <div className="flex gap-2">
+                  <button onClick={exportCSV} className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2 text-sm">
+                    <Download className="w-4 h-4" />CSV
+                  </button>
+                  <LaporanBulananButton transactions={transactions} coaList={coa} rkamList={rkam} institution="MTs Ishlahul Amanah" userRole={role} userName={user.name} />
+                  {role !== 'viewer' && <button onClick={function () { setShowForm(!showForm); }} className="px-4 py-2 bg-emerald-600 text-white rounded-lg flex items-center gap-2"><Plus className="w-4 h-4" />Entri</button>}
+                </div>
+              </div>
+              
+              {showForm && role !== 'viewer' && <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div><label className="block text-sm font-medium mb-1">Tanggal</label><input type="date" name="date" value={form.date} onChange={handleInput} required className="w-full p-2 border rounded-md" /></div>
+                <div><label className="block text-sm font-medium mb-1">No Ref</label><input type="text" name="ref" value={form.ref} onChange={handleInput} placeholder="INV-001" required className="w-full p-2 border rounded-md" /></div>
+                <div><label className="block text-sm font-medium mb-1">Akun</label><select name="coa" value={form.coa} onChange={handleInput} className="w-full p-2 border rounded-md">{coa.map(function (c) { return <option key={c.code} value={c.code}>[{c.code}] {c.name}</option>; })}</select></div>
+                <div className="md:col-span-2"><label className="block text-sm font-medium mb-1">Deskripsi</label><input type="text" name="desc" value={form.desc} onChange={handleInput} required className="w-full p-2 border rounded-md" /></div>
+                <div><label className="block text-sm font-medium mb-1">Nominal (Rp)</label><input type="number" name="amount" value={form.amount} onChange={handleInput} required min="1" className="w-full p-2 border rounded-md" /></div>
+                <div><label className="block text-sm font-medium mb-1">RKAM</label><select name="rkam" value={form.rkam} onChange={handleInput} className="w-full p-2 border rounded-md"><option value="">--</option>{rkam.map(function (r) { return <option key={r.code} value={r.code}>[{r.code}] {r.name}</option>; })}</select></div>
+                <div><label className="block text-sm font-medium mb-1">Pembatasan</label><select name="restriction" value={form.restriction} onChange={handleInput} className="w-full p-2 border rounded-md"><option value="unrestricted">Tidak Terikat</option><option value="restricted-scholarship">Beasiswa</option><option value="restricted-infrastructure">Infrastruktur</option></select></div>
+                <div><label className="block text-sm font-medium mb-1">Dok Ref</label><input type="text" name="docRef" value={form.docRef} onChange={handleInput} className="w-full p-2 border rounded-md" /></div>
+                <div className="md:col-span-3 flex justify-end gap-2 mt-2"><button type="button" onClick={function () { setShowForm(false); }} className="px-6 py-2 border rounded-md">Batal</button><button type="submit" className="px-6 py-2 bg-slate-800 text-white rounded-md font-medium">Simpan</button></div>
+              </form>}
+              
+              <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm whitespace-nowrap">
+                    <thead className="bg-slate-50 border-b">
+                      <tr>
+                        <th className="p-4 font-semibold">Tanggal</th>
+                        <th className="p-4 font-semibold">Ref</th>
+                        <th className="p-4 font-semibold">Deskripsi</th>
+                        <th className="p-4 font-semibold">Akun</th>
+                        <th className="p-4 font-semibold text-right">Debet</th>
+                        <th className="p-4 font-semibold text-right">Kredit</th>
+                        <th className="p-4 font-semibold text-center">Status</th>
+                        <th className="p-4 font-semibold text-center">Resi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {transactions.slice().reverse().map(function (t, i) { 
+                        var ci = coa.find(function (c) { return String(c.code) === String(t.coa); }); 
+                        var isR = t.restriction && t.restriction !== 'unrestricted'; 
+                        return (
+                          <tr key={i} className={'hover:bg-slate-50 ' + (isR ? 'bg-amber-50' : '')}>
+                            <td className="p-4">{t.date}</td>
+                            <td className="p-4 text-slate-500 font-mono text-xs">{t.ref}</td>
+                            <td className="p-4 font-medium">{t.desc}{t.rkam && <span className="text-xs bg-slate-100 px-2 py-1 rounded ml-2">{t.rkam}</span>}</td>
+                            <td className="p-4 text-xs">{ci ? ci.name : t.coa}</td>
+                            <td className="p-4 text-right text-emerald-600 font-medium">{t.type === 'IN' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td>
+                            <td className="p-4 text-right text-rose-600 font-medium">{t.type === 'OUT' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td>
+                            <td className="p-4 text-center">{isR ? <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">Terikat</span> : <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Bebas</span>}</td>
+                            <td className="p-4 text-center">
+                              {t.type === 'IN' && <PrintReceiptButton transaction={t} institution="MTs Ishlahul Amanah" />}
+                            </td>
+                          </tr>
+                        ); 
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
+          )}
 
+          {/* HALAMAN DATA SISWA YANG SUDAH DIPISAH */}
           {tab === 'students' && (
             <div className="space-y-6 max-w-7xl mx-auto">
               <div className="flex justify-between items-center">
@@ -380,7 +439,6 @@ export default function App() {
                     </thead>
                     <tbody className="divide-y">
                       {students.map((s, i) => {
-                        // Hitung piutang dari data billing secara otomatis
                         const studentBills = billings.filter(b => b.studentId === s.studentId && b.status !== 'LUNAS');
                         const totalDebt = studentBills.reduce((acc, curr) => acc + (Number(curr.amountDue) - Number(curr.amountPaid)), 0);
                         
@@ -414,59 +472,6 @@ export default function App() {
               </div>
             </div>
           )}
-            
-            
-            {showForm && role !== 'viewer' && <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div><label className="block text-sm font-medium mb-1">Tanggal</label><input type="date" name="date" value={form.date} onChange={handleInput} required className="w-full p-2 border rounded-md" /></div>
-              <div><label className="block text-sm font-medium mb-1">No Ref</label><input type="text" name="ref" value={form.ref} onChange={handleInput} placeholder="INV-001" required className="w-full p-2 border rounded-md" /></div>
-              <div><label className="block text-sm font-medium mb-1">Akun</label><select name="coa" value={form.coa} onChange={handleInput} className="w-full p-2 border rounded-md">{coa.map(function (c) { return <option key={c.code} value={c.code}>[{c.code}] {c.name}</option>; })}</select></div>
-              <div className="md:col-span-2"><label className="block text-sm font-medium mb-1">Deskripsi</label><input type="text" name="desc" value={form.desc} onChange={handleInput} required className="w-full p-2 border rounded-md" /></div>
-              <div><label className="block text-sm font-medium mb-1">Nominal (Rp)</label><input type="number" name="amount" value={form.amount} onChange={handleInput} required min="1" className="w-full p-2 border rounded-md" /></div>
-              <div><label className="block text-sm font-medium mb-1">RKAM</label><select name="rkam" value={form.rkam} onChange={handleInput} className="w-full p-2 border rounded-md"><option value="">--</option>{rkam.map(function (r) { return <option key={r.code} value={r.code}>[{r.code}] {r.name}</option>; })}</select></div>
-              <div><label className="block text-sm font-medium mb-1">Pembatasan</label><select name="restriction" value={form.restriction} onChange={handleInput} className="w-full p-2 border rounded-md"><option value="unrestricted">Tidak Terikat</option><option value="restricted-scholarship">Beasiswa</option><option value="restricted-infrastructure">Infrastruktur</option></select></div>
-              <div><label className="block text-sm font-medium mb-1">Dok Ref</label><input type="text" name="docRef" value={form.docRef} onChange={handleInput} className="w-full p-2 border rounded-md" /></div>
-              <div className="md:col-span-3 flex justify-end gap-2 mt-2"><button type="button" onClick={function () { setShowForm(false); }} className="px-6 py-2 border rounded-md">Batal</button><button type="submit" className="px-6 py-2 bg-slate-800 text-white rounded-md font-medium">Simpan</button></div>
-            </form>}
-            
-            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm whitespace-nowrap">
-                  <thead className="bg-slate-50 border-b">
-                    <tr>
-                      <th className="p-4 font-semibold">Tanggal</th>
-                      <th className="p-4 font-semibold">Ref</th>
-                      <th className="p-4 font-semibold">Deskripsi</th>
-                      <th className="p-4 font-semibold">Akun</th>
-                      <th className="p-4 font-semibold text-right">Debet</th>
-                      <th className="p-4 font-semibold text-right">Kredit</th>
-                      <th className="p-4 font-semibold text-center">Status</th>
-                      <th className="p-4 font-semibold text-center">Resi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {transactions.slice().reverse().map(function (t, i) { 
-                      var ci = coa.find(function (c) { return String(c.code) === String(t.coa); }); 
-                      var isR = t.restriction && t.restriction !== 'unrestricted'; 
-                      return (
-                        <tr key={i} className={'hover:bg-slate-50 ' + (isR ? 'bg-amber-50' : '')}>
-                          <td className="p-4">{t.date}</td>
-                          <td className="p-4 text-slate-500 font-mono text-xs">{t.ref}</td>
-                          <td className="p-4 font-medium">{t.desc}{t.rkam && <span className="text-xs bg-slate-100 px-2 py-1 rounded ml-2">{t.rkam}</span>}</td>
-                          <td className="p-4 text-xs">{ci ? ci.name : t.coa}</td>
-                          <td className="p-4 text-right text-emerald-600 font-medium">{t.type === 'IN' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td>
-                          <td className="p-4 text-right text-rose-600 font-medium">{t.type === 'OUT' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td>
-                          <td className="p-4 text-center">{isR ? <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">Terikat</span> : <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Bebas</span>}</td>
-                          <td className="p-4 text-center">
-                            {t.type === 'IN' && <PrintReceiptButton transaction={t} institution="MTs Ishlahul Amanah" />}
-                          </td>
-                        </tr>
-                      ); 
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>}
 
           {tab === 'rkam' && <div className="space-y-6 max-w-6xl mx-auto"><h2 className="text-2xl font-bold">Monitoring RKAM</h2><div className="bg-white p-6 rounded-xl shadow-sm border"><div className="h-80 mb-8"><ResponsiveContainer><BarChart data={analytics.rkamData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="code" /><YAxis tickFormatter={function (v) { return (v / 1000000) + 'M'; }} /><RechartsTooltip formatter={function (v) { return 'Rp ' + fmtCurrency(v); }} /><Legend /><Bar dataKey="budget" name="Pagu" fill="#cbd5e1" radius={[4, 4, 0, 0]} /><Bar dataKey="realization" name="Realisasi" fill="#10b981" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div>
           <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-slate-50 border-b"><tr><th className="p-3 font-semibold">Kode</th><th className="p-3 font-semibold">Program</th><th className="p-3 font-semibold text-right">Anggaran</th><th className="p-3 font-semibold text-right">Q1</th><th className="p-3 font-semibold text-right">Q2</th><th className="p-3 font-semibold text-right">Q3</th><th className="p-3 font-semibold text-right">Q4</th><th className="p-3 font-semibold text-right">Realisasi</th><th className="p-3 font-semibold text-right">Sisa</th><th className="p-3 font-semibold text-center">%</th></tr></thead>
