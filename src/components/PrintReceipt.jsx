@@ -3,18 +3,6 @@
  * ================
  * Komponen React untuk cetak resi/kwitansi pembayaran
  * Taruh file ini di: src/components/PrintReceipt.jsx
- * 
- * Cara pakai di JurnalUmum:
- *   import { PrintReceiptButton } from './components/PrintReceipt';
- *   
- *   // Di dalam tabel transaksi, kolom aksi:
- *   {tx.type === 'IN' && (
- *     <PrintReceiptButton 
- *       transaction={tx} 
- *       institution="MTs Ishlahul Amanah"  // atau "MA Ishlahul Amanah"
- *       userName={user.name}
- *     />
- *   )}
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -202,7 +190,7 @@ function ReceiptPreviewModal({ isOpen, onClose, data, onPrint, printStatus, inst
               {institution}
             </div>
             <div style={{ fontSize: '11px', color: '#666' }}>
-              Yayasan Ishlahul Amanah
+              YPI Ishlahul Amanah
             </div>
             <div style={{ fontSize: '11px', color: '#666' }}>
               Pangalengan, Kab. Bandung
@@ -227,7 +215,7 @@ function ReceiptPreviewModal({ isOpen, onClose, data, onPrint, printStatus, inst
               {data.class && <Row label="Kelas" value={data.class} />}
               <Row label="Keterangan" value={data.desc} />
               <Row label="Jenis" value={data.coa} />
-              {data.quarter && <Row label="Periode" value={data.quarter} />}
+              {data.semester && <Row label="Periode" value={data.semester} />}
               {data.paymentMethod && <Row label="Pembayaran" value={data.paymentMethod} />}
             </tbody>
           </table>
@@ -250,7 +238,7 @@ function ReceiptPreviewModal({ isOpen, onClose, data, onPrint, printStatus, inst
               <div>Penerima,</div>
               <div style={{ height: '50px' }} />
               <div style={{ borderTop: '1px solid #333', paddingTop: '2px' }}>
-                ({data.receivedBy || '...........'})
+                ({data.receivedBy || 'Bendahara'})
               </div>
             </div>
             <div style={{ textAlign: 'center', width: '45%' }}>
@@ -262,9 +250,14 @@ function ReceiptPreviewModal({ isOpen, onClose, data, onPrint, printStatus, inst
             </div>
           </div>
 
-          {/* Footer */}
-          <div style={{ textAlign: 'center', fontSize: '10px', color: '#888', marginTop: '12px' }}>
-            Simpan kwitansi ini sebagai bukti pembayaran
+          {/* Footer - Syarat & Ketentuan */}
+          <div style={{ fontSize: '10px', color: '#666', marginTop: '20px', borderTop: '1px dashed #ccc', paddingTop: '10px' }}>
+            <b style={{color: '#333'}}>Syarat dan Ketentuan:</b>
+            <ol style={{ paddingLeft: '15px', margin: '4px 0 0 0' }}>
+              <li>Semua biaya bersifat non-refundable (tidak dapat dikembalikan).</li>
+              <li>Pembayaran wajib dilakukan sesuai tanggal jatuh tempo untuk menghindari denda keterlambatan.</li>
+              <li>Untuk informasi lebih lanjut, hubungi Finance MTs: 0822-4033-0738.</li>
+            </ol>
           </div>
         </div>
 
@@ -374,14 +367,15 @@ function generatePrintHTML(data, institution) {
     .sig-block { text-align: center; width: 40%; }
     .sig-space { height: 55px; }
     .sig-name { border-top: 1px solid #000; padding-top: 3px; }
-    .footer { text-align: center; font-size: 10px; color: #666; margin-top: 15px; }
+    .footer { font-size: 10px; color: #666; margin-top: 25px; border-top: 1px dashed #ccc; padding-top: 10px; }
+    .footer ol { padding-left: 15px; margin: 4px 0 0 0; }
   </style>
 </head>
 <body>
   <div class="center">
     <div class="title">KWITANSI PEMBAYARAN</div>
     <div class="bold">${institution}</div>
-    <div style="font-size:11px;color:#555">Yayasan Ishlahul Amanah<br>Pangalengan, Kab. Bandung</div>
+    <div style="font-size:11px;color:#555">YPI Ishlahul Amanah<br>Pangalengan, Kab. Bandung</div>
   </div>
   <div class="line-double"></div>
   <div class="row"><span class="label">No. Resi</span><span class="sep">:</span><span class="val">${data.ref || '-'}</span></div>
@@ -391,7 +385,7 @@ function generatePrintHTML(data, institution) {
   ${data.class ? `<div class="row"><span class="label">Kelas</span><span class="sep">:</span><span class="val">${data.class}</span></div>` : ''}
   <div class="row"><span class="label">Keterangan</span><span class="sep">:</span><span class="val">${data.desc || '-'}</span></div>
   <div class="row"><span class="label">Jenis</span><span class="sep">:</span><span class="val">${data.coa || '-'}</span></div>
-  ${data.quarter ? `<div class="row"><span class="label">Periode</span><span class="sep">:</span><span class="val">${data.quarter}</span></div>` : ''}
+  ${data.semester ? `<div class="row"><span class="label">Periode</span><span class="sep">:</span><span class="val">${data.semester}</span></div>` : ''}
   ${data.paymentMethod ? `<div class="row"><span class="label">Pembayaran</span><span class="sep">:</span><span class="val">${data.paymentMethod}</span></div>` : ''}
   <div class="line-dashed"></div>
   <div class="amount">JUMLAH: ${formatRupiah(data.amount)}</div>
@@ -401,7 +395,7 @@ function generatePrintHTML(data, institution) {
     <div class="sig-block">
       <div>Penerima,</div>
       <div class="sig-space"></div>
-      <div class="sig-name">(${data.receivedBy || '...........'})</div>
+      <div class="sig-name">(${data.receivedBy || 'Bendahara'})</div>
     </div>
     <div class="sig-block">
       <div>Pembayar,</div>
@@ -409,7 +403,15 @@ function generatePrintHTML(data, institution) {
       <div class="sig-name">(${data.studentName || '...........'})</div>
     </div>
   </div>
-  <div class="footer">Simpan kwitansi ini sebagai bukti pembayaran<br>Terima kasih atas kepercayaan Anda</div>
+  
+  <div class="footer">
+    <b style="color:#333;">Syarat dan Ketentuan:</b>
+    <ol>
+      <li>Semua biaya bersifat non-refundable (tidak dapat dikembalikan).</li>
+      <li>Pembayaran wajib dilakukan sesuai tanggal jatuh tempo untuk menghindari denda keterlambatan.</li>
+      <li>Untuk informasi lebih lanjut, hubungi Finance MTs: 0822-4033-0738.</li>
+    </ol>
+  </div>
 </body>
 </html>`;
 }
@@ -417,27 +419,39 @@ function generatePrintHTML(data, institution) {
 // ============================================================
 // MAIN EXPORT: PrintReceiptButton
 // ============================================================
-export function PrintReceiptButton({ transaction, institution, userName }) {
+export function PrintReceiptButton({ transaction, institution, userName, students = [], coaList = [] }) {
   const [showPreview, setShowPreview] = useState(false);
-  const [printStatus, setPrintStatus] = useState('idle'); // idle | printing | success | error | no_server
+  const [printStatus, setPrintStatus] = useState('idle');
 
-  // Hanya tampil untuk transaksi masuk (SPP / Donasi)
-  // if (transaction.type !== 'IN') return null;
+  // Logika Format Tanggal ID
+  const dateObj = new Date(transaction.date);
+  const formattedDate = dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  // Logika Semester
+  const month = dateObj.getMonth(); // 0 = Jan, 6 = Jul
+  const semesterStatus = month >= 6 ? 'Semester 1' : 'Semester 2';
+
+  // Logika Nama Siswa dari studentId
+  const student = students.find(s => String(s.studentId) === String(transaction.studentId));
+  const studentNameDisplay = student ? student.name : (transaction.desc?.split(' - ')[0] || '-');
+  const studentClassDisplay = student ? student.class : '';
+
+  // Logika Nama Akun
+  const coaData = coaList.find(c => String(c.code) === String(transaction.coa));
+  const coaNameDisplay = coaData ? coaData.name : transaction.coa;
 
   const receiptData = {
     institution: institution || 'MTs Ishlahul Amanah',
     ref: transaction.ref || `RCV-${Date.now()}`,
-    date: transaction.date || new Date().toLocaleDateString('id-ID', { 
-      day: 'numeric', month: 'long', year: 'numeric' 
-    }),
-    studentName: transaction.studentName || transaction.desc?.split(' - ')[0] || '',
-    class: transaction.class || '',
+    date: formattedDate,
+    studentName: studentNameDisplay,
+    class: studentClassDisplay,
     desc: transaction.desc || '',
-    coa: transaction.coaName || transaction.coa || '',
+    coa: coaNameDisplay,
     amount: transaction.amount || 0,
     paymentMethod: transaction.paymentMethod || 'Tunai',
     receivedBy: userName || 'Bendahara',
-    quarter: transaction.quarter || '',
+    semester: semesterStatus,
   };
 
   const handlePrintDotMatrix = async () => {
