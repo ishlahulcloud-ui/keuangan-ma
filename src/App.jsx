@@ -1,3 +1,4 @@
+// TEST MEMAKSA GIT MENDETEKSI PERUBAHAN
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
