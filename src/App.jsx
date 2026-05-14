@@ -385,18 +385,30 @@ export default function App() {
                 </select>
               </div>
 
-              {/* Logika Pintar: Hanya muncul jika Siswa dipilih */}
+                          {/* Logika Pintar: Hanya muncul jika Siswa dipilih */}
               {form.studentId ? (
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1 text-emerald-600">Pilih Tagihan (Untuk Pelunasan/Cicilan)</label>
                   <select name="billingId" value={form.billingId} onChange={handleInput} className="w-full p-2 border border-emerald-300 bg-emerald-50 rounded-md">
                     <option value="">-- Pilih Tagihan --</option>
-                    {billings.filter(b => String(b.studentId) === String(form.studentId) && String(b.status).toUpperCase() !== 'PAID').map(b => {
-                    const balance = Number(b.amountDue || 0) - Number(b.amountPaid || 0);
-
+                    
+                    {/* INDIKATOR DEBUG (Akan muncul jika data Sheets gagal ditarik) */}
+                    {billings.length === 0 && <option disabled>⚠️ Database Tagihan Kosong / Belum Di-Refresh</option>}
+                    
+                    {billings.filter(b => {
+                      // Membersihkan spasi tersembunyi & menyamakan tipe data menjadi Teks murni
+                      const sheetStudentId = String(b.studentId || '').trim();
+                      const formStudentId = String(form.studentId || '').trim();
+                      const tagihanStatus = String(b.status || '').toUpperCase().trim();
+                      
+                      // Tampilkan jika ID cocok dan status BUKAN PAID atau LUNAS
+                      return sheetStudentId === formStudentId && tagihanStatus !== 'PAID' && tagihanStatus !== 'LUNAS';
+                    }).map(b => {
+                      // Kalkulasi sisa piutang
+                      const balance = Number(b.amountDue || 0) - Number(b.amountPaid || 0);
                       return (
                         <option key={b.billingId} value={b.billingId}>
-                          {b.category} ({b.month}) - Sisa Piutang: Rp {fmtCurrency(balance)}
+                          {b.category || 'Tagihan'} ({b.month}) - Sisa Piutang: Rp {fmtCurrency(balance)}
                         </option>
                       )
                     })}
@@ -405,6 +417,7 @@ export default function App() {
               ) : (
                 <div className="md:col-span-2"><label className="block text-sm font-medium mb-1">Deskripsi</label><input type="text" name="desc" value={form.desc} onChange={handleInput} required className="w-full p-2 border rounded-md" /></div>
               )}
+
 
               <div><label className="block text-sm font-medium mb-1">Nominal Masuk (Rp)</label><input type="number" name="amount" value={form.amount} onChange={handleInput} required min="1" className="w-full p-2 border rounded-md" /></div>
               
