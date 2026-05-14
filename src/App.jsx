@@ -157,11 +157,9 @@ export default function App() {
   var [online, setOnline] = useState(true);
   var [sync, setSync] = useState('synced');
   var [form, setForm] = useState({
-  date: new Date().toISOString().split('T')[0], 
-  ref: '', desc: '', coa: '4100', rkam: '', amount: '', 
-  restriction: 'unrestricted', docRef: '', approvedBy: '', 
-  studentId: '', billingId: '' // <-- Tambahkan billingId di sini
-});
+    date: new Date().toISOString().split('T')[0], ref: '', desc: '', coa: '4100', rkam: '', 
+    amount: '', restriction: 'unrestricted', docRef: '', approvedBy: '', studentId: '', billingId: ''
+  });
 
   var [students, setStudents] = useState([]);
   var [billings, setBillings] = useState([]);
@@ -247,11 +245,11 @@ export default function App() {
           amount: Number(form.amount), restriction: form.restriction, docRef: form.docRef, 
           approvedBy: form.approvedBy || user.name, quarter: getQuarter(form.date),
           studentId: form.studentId,
-          billingId: form.billingId// <-- Sertakan billingId saat menambahkan transaksi
+          billingId: form.billingId
         } 
       });
       await refreshTx(); setShowForm(false);
-      setForm({ date: new Date().toISOString().split('T')[0], ref: '', desc: '', coa: '4100', rkam: '', amount: '', restriction: 'unrestricted', docRef: '', approvedBy: '', studentId: '' });
+      setForm({ date: new Date().toISOString().split('T')[0], ref: '', desc: '', coa: '4100', rkam: '', amount: '', restriction: 'unrestricted', docRef: '', approvedBy: '', studentId: '', billingId: '' });
       setSync('synced'); alert('Transaksi berhasil!');
     } catch (err) { setSync('error'); alert('Gagal: ' + err.message); }
   }
@@ -370,7 +368,7 @@ export default function App() {
                 </div>
               </div>
               
-                          {showForm && role !== 'viewer' && <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border grid grid-cols-1 md:grid-cols-3 gap-4">
+              {showForm && role !== 'viewer' && <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border grid grid-cols-1 md:grid-cols-3 gap-4">
               <div><label className="block text-sm font-medium mb-1">Tanggal</label><input type="date" name="date" value={form.date} onChange={handleInput} required className="w-full p-2 border rounded-md" /></div>
               <div><label className="block text-sm font-medium mb-1">No Ref</label><input type="text" name="ref" value={form.ref} onChange={handleInput} placeholder="INV-001" required className="w-full p-2 border rounded-md" /></div>
               <div><label className="block text-sm font-medium mb-1">Akun</label><select name="coa" value={form.coa} onChange={handleInput} className="w-full p-2 border rounded-md">{coa.map(function (c) { return <option key={c.code} value={c.code}>[{c.code}] {c.name}</option>; })}</select></div>
@@ -410,7 +408,7 @@ export default function App() {
               
               {/* Jika memilih tagihan, Deskripsi otomatis menyesuaikan, jika tidak, input manual */}
               {form.studentId && form.billingId ? (
-                 <div className="md:col-span-2"><label className="block text-sm font-medium mb-1">Deskripsi/Catatan Pembayaran</label><input type="text" name="desc" value={form.desc} onChange={handleInput} placeholder="Contoh: Cicilan ke-1 PPDB" required className="w-full p-2 border rounded-md" /></div>
+                 <div className="md:col-span-2"><label className="block text-sm font-medium mb-1">Deskripsi/Catatan Pembayaran</label><input type="text" name="desc" value={form.desc} onChange={handleInput} placeholder="Contoh: Cicilan ke-1" required className="w-full p-2 border rounded-md" /></div>
               ) : null}
 
               <div><label className="block text-sm font-medium mb-1">RKAM</label><select name="rkam" value={form.rkam} onChange={handleInput} className="w-full p-2 border rounded-md"><option value="">--</option>{rkam.map(function (r) { return <option key={r.code} value={r.code}>[{r.code}] {r.name}</option>; })}</select></div>
@@ -419,31 +417,6 @@ export default function App() {
               
               <div className="md:col-span-3 flex justify-end gap-2 mt-6"><button type="button" onClick={function () { setShowForm(false); }} className="px-6 py-2 border rounded-md">Batal</button><button type="submit" className="px-6 py-2 bg-slate-800 text-white rounded-md font-medium">Simpan</button></div>
             </form>}
-
-
-                <div><label className="block text-sm font-medium mb-1">Tanggal</label><input type="date" name="date" value={form.date} onChange={handleInput} required className="w-full p-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">No Ref</label><input type="text" name="ref" value={form.ref} onChange={handleInput} placeholder="INV-001" required className="w-full p-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">Akun</label><select name="coa" value={form.coa} onChange={handleInput} className="w-full p-2 border rounded-md">{coa.map(function (c) { return <option key={c.code} value={c.code}>[{c.code}] {c.name}</option>; })}</select></div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1">Siswa (Opsional)</label>
-                  <select name="studentId" value={form.studentId} onChange={handleInput} className="w-full p-2 border rounded-md">
-                    <option value="">-- Pilih Siswa --</option>
-                    {students.map(function (s) { 
-                      return <option key={s.studentId} value={s.studentId}>{s.name} ({s.class})</option>; 
-                    })}
-                  </select>
-                </div>
-
-                <div className="md:col-span-2"><label className="block text-sm font-medium mb-1">Deskripsi</label><input type="text" name="desc" value={form.desc} onChange={handleInput} required className="w-full p-2 border rounded-md" /></div>
-                
-                <div><label className="block text-sm font-medium mb-1">Nominal (Rp)</label><input type="number" name="amount" value={form.amount} onChange={handleInput} required min="1" className="w-full p-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">RKAM</label><select name="rkam" value={form.rkam} onChange={handleInput} className="w-full p-2 border rounded-md"><option value="">--</option>{rkam.map(function (r) { return <option key={r.code} value={r.code}>[{r.code}] {r.name}</option>; })}</select></div>
-                <div><label className="block text-sm font-medium mb-1">Pembatasan</label><select name="restriction" value={form.restriction} onChange={handleInput} className="w-full p-2 border rounded-md"><option value="unrestricted">Tidak Terikat</option><option value="restricted-scholarship">Beasiswa</option><option value="restricted-infrastructure">Infrastruktur</option></select></div>
-                
-                <div><label className="block text-sm font-medium mb-1">Dok Ref</label><input type="text" name="docRef" value={form.docRef} onChange={handleInput} className="w-full p-2 border rounded-md" /></div>
-                <div className="md:col-span-2 flex justify-end gap-2 mt-6"><button type="button" onClick={function () { setShowForm(false); }} className="px-6 py-2 border rounded-md">Batal</button><button type="submit" className="px-6 py-2 bg-slate-800 text-white rounded-md font-medium">Simpan</button></div>
-              </form>}
               
               <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
                 <div className="overflow-x-auto">
@@ -474,7 +447,7 @@ export default function App() {
                             <td className="p-4 text-right text-rose-600 font-medium">{t.type === 'OUT' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td>
                             <td className="p-4 text-center">{isR ? <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded">Terikat</span> : <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Bebas</span>}</td>
                             <td className="p-4 text-center">
-                              {/* PENERAPAN PROP BARU UNTUK KOMPONEN RESI */}
+                              {/* Prop pendukung untuk custom resi */}
                               {t.type === 'IN' && <PrintReceiptButton transaction={t} institution="YPI Ishlahul Amanah" students={students} coaList={coa} />}
                             </td>
                           </tr>
@@ -514,7 +487,7 @@ export default function App() {
                     </thead>
                     <tbody className="divide-y">
                       {students.map((s, i) => {
-                        const studentBills = billings.filter(b => b.studentId === s.studentId && b.status !== 'LUNAS');
+                        const studentBills = billings.filter(b => b.studentId === s.studentId && b.status !== 'PAID');
                         const totalDebt = studentBills.reduce((acc, curr) => acc + (Number(curr.amountDue) - Number(curr.amountPaid)), 0);
                         
                         return (
