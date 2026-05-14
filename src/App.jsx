@@ -391,8 +391,9 @@ export default function App() {
                   <label className="block text-sm font-medium mb-1 text-emerald-600">Pilih Tagihan (Untuk Pelunasan/Cicilan)</label>
                   <select name="billingId" value={form.billingId} onChange={handleInput} className="w-full p-2 border border-emerald-300 bg-emerald-50 rounded-md">
                     <option value="">-- Pilih Tagihan --</option>
-                    {billings.filter(b => b.studentId === form.studentId && b.status !== 'PAID').map(b => {
-                      const balance = b.amountDue - b.amountPaid;
+                    {billings.filter(b => String(b.studentId) === String(form.studentId) && String(b.status).toUpperCase() !== 'PAID').map(b => {
+                    const balance = Number(b.amountDue || 0) - Number(b.amountPaid || 0);
+
                       return (
                         <option key={b.billingId} value={b.billingId}>
                           {b.category} ({b.month}) - Sisa Piutang: Rp {fmtCurrency(balance)}
