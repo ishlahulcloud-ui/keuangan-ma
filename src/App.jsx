@@ -370,7 +370,7 @@ export default function App() {
                 </div>
               </div>
               
-              {showForm && role !== 'viewer' && {showForm && role !== 'viewer' && <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border grid grid-cols-1 md:grid-cols-3 gap-4">
+              {showForm && role !== 'viewer' && <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border grid grid-cols-1 md:grid-cols-3 gap-4">
               <div><label className="block text-sm font-medium mb-1">Tanggal</label><input type="date" name="date" value={form.date} onChange={handleInput} required className="w-full p-2 border rounded-md" /></div>
               <div><label className="block text-sm font-medium mb-1">No Ref</label><input type="text" name="ref" value={form.ref} onChange={handleInput} placeholder="INV-001" required className="w-full p-2 border rounded-md" /></div>
               <div><label className="block text-sm font-medium mb-1">Akun</label><select name="coa" value={form.coa} onChange={handleInput} className="w-full p-2 border rounded-md">{coa.map(function (c) { return <option key={c.code} value={c.code}>[{c.code}] {c.name}</option>; })}</select></div>
