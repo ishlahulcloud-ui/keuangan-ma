@@ -156,24 +156,24 @@ export default function App() {
       var finalRef = form.ref || "KW-" + new Date().getTime();
 
       if (form.studentId && selectedBills.length > 0) {
-        // PERBAIKAN BUG NAMA SISWA UNDEFINED
         var studentObj = students.find(s => String(s.studentId) === String(form.studentId));
         var studentName = studentObj ? studentObj.name : 'Siswa';
 
         for (let b of selectedBills) {
           let targetCoa = '4100'; 
           let catLower = String(b.category).toLowerCase();
-          if (catLower.includes('ppdb') || catLower.includes('pangkal')) targetCoa = '4101';
+          
+          // Penambahan Kategori Mapping Baru
+          if (catLower.includes('ppdb') || catLower.includes('pangkal') || catLower.includes('daftar ulang')) targetCoa = '4101';
           if (catLower.includes('pts') || catLower.includes('pas') || catLower.includes('pat') || catLower.includes('ujian')) targetCoa = '4102';
-          if (catLower.includes('trip') || catLower.includes('kegiatan')) targetCoa = '4302';
+          if (catLower.includes('trip') || catLower.includes('kegiatan') || catLower.includes('akhir tahun')) targetCoa = '4302';
 
-          // Bersihkan kata 'Pembayaran' ganda di deskripsi
-          let cleanCat = String(b.category).replace(/pembayaran/gi, '').trim();
+          let cleanCat = String(b.category || 'Tagihan Sistem').replace(/pembayaran/gi, '').trim();
 
           await apiPost('addTransaction', {
             data: {
               date: form.date, ref: finalRef, 
-              desc: `Pembayaran ${cleanCat} (${b.month}) - ${studentName}`,
+              desc: `Pembayaran ${cleanCat} (${b.month || 'Periode'}) - ${studentName}`,
               coa: targetCoa, type: 'IN', amount: b.payAmount,
               restriction: form.restriction, studentId: form.studentId, billingId: b.billingId, rkam: form.rkam
             }
@@ -207,7 +207,7 @@ export default function App() {
   }
 
   // ==========================================================================
-  // ANALYTICS & DASHBOARD CHARTS (DIKEMBALIKAN UTUH)
+  // ANALYTICS & DASHBOARD CHARTS
   // ==========================================================================
   var analytics = useMemo(() => {
     var income = 0, expense = 0, incR = 0, expR = 0, spp = 0, usaha = 0, donasi = 0, donasiR = 0;
@@ -257,7 +257,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans text-slate-800">
-      {/* Sidebar - DIKEMBALIKAN UTUH */}
       <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col">
         <div className="p-6 border-b border-slate-800 flex items-center gap-3">
           <img src={logoMts} className="w-8 h-8 object-contain" alt="Logo" />
@@ -294,7 +293,6 @@ export default function App() {
 
         <div className="flex-1 overflow-auto p-4 md:p-8">
           
-          {/* DASHBOARD DENGAN GRAFIK YANG SUDAH DIKEMBALIKAN */}
           {tab === 'dashboard' && (
             <div className="space-y-6 max-w-6xl mx-auto">
                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -346,7 +344,6 @@ export default function App() {
             </div>
           )}
 
-          {/* JURNAL UMUM */}
           {tab === 'jurnal' && (
             <div className="space-y-6 max-w-7xl mx-auto">
               <div className="flex justify-between items-center">
@@ -383,7 +380,8 @@ export default function App() {
                                 <div className="flex items-center gap-3">
                                   <input type="checkbox" className="w-5 h-5 rounded" checked={!!isSelected} onChange={() => toggleBill(b)} />
                                   <div>
-                                    <p className="font-bold text-sm">{b.category}</p>
+                                    {/* BUG FIX: Tampilkan default jika data kosong dari database */}
+                                    <p className="font-bold text-sm">{b.category || 'Tagihan (Tanpa Kategori)'}</p>
                                     <p className="text-xs text-rose-500 font-mono">Sisa: Rp {fmtCurrency(sisaPiutang)}</p>
                                   </div>
                                 </div>
@@ -471,7 +469,6 @@ export default function App() {
             </div>
           )}
 
-          {/* DATA SISWA & PENAGIHAN MASSAL */}
           {tab === 'students' && (
              <div className="space-y-6 max-w-7xl mx-auto">
                 <div className="bg-emerald-600 p-6 rounded-2xl text-white flex justify-between items-center shadow-lg">
@@ -483,11 +480,15 @@ export default function App() {
                    <div>
                      <label className="text-[10px] font-bold text-slate-500 uppercase">Kategori Tagihan</label>
                      <select id="genCat" className="w-full p-2 border rounded mt-1 bg-slate-50">
+                       <option value="SPP 1 Tahun Ajaran">SPP 1 Tahun Ajaran</option>
                        <option value="Infaq Bulanan">Infaq Bulanan (SPP)</option>
                        <option value="PPDB (Uang Pangkal)">PPDB (Uang Pangkal)</option>
+                       <option value="Daftar Ulang">Daftar Ulang</option>
                        <option value="Pembayaran PTS">Pembayaran PTS</option>
                        <option value="Pembayaran PAS">Pembayaran PAS</option>
+                       <option value="Pembayaran PAT">Pembayaran PAT</option>
                        <option value="Field Trip">Field Trip</option>
+                       <option value="Kegiatan Akhir Tahun">Kegiatan Akhir Tahun</option>
                      </select>
                    </div>
                    <div>
@@ -501,7 +502,7 @@ export default function App() {
                    </div>
                    <div>
                      <label className="text-[10px] font-bold text-slate-500 uppercase">Nominal (Rp)</label>
-                     <input id="genAmount" type="number" placeholder="Khusus Non-SPP" className="w-full p-2 border rounded mt-1 bg-slate-50" />
+                     <input id="genAmount" type="number" placeholder="Nominal Total" className="w-full p-2 border rounded mt-1 bg-slate-50" />
                    </div>
                    <button 
                      onClick={() => handleGenerateBilling({
@@ -540,7 +541,6 @@ export default function App() {
              </div>
           )}
 
-          {/* TAB RKAM */}
           {tab === 'rkam' && (
             <div className="space-y-6 max-w-6xl mx-auto">
               <h2 className="text-2xl font-bold">Monitoring RKAM</h2>
@@ -562,7 +562,6 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB KAS */}
           {tab === 'cashflow' && (
             <div className="space-y-6 max-w-6xl mx-auto">
               <h2 className="text-2xl font-bold">Proyeksi Arus Kas</h2>
@@ -585,7 +584,6 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB DANA TERIKAT */}
           {tab === 'restricted' && (
             <div className="space-y-6 max-w-6xl mx-auto">
               <h2 className="text-2xl font-bold">Dana Terikat</h2>
@@ -597,7 +595,6 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB ISAK 35 */}
           {tab === 'isak' && (
             <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg border">
               <div className="text-center border-b-4 border-double border-slate-800 pb-6 mb-8">
