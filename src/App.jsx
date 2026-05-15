@@ -102,9 +102,8 @@ export default function App() {
   var [sync, setSync] = useState('synced');
   var [showForm, setShowForm] = useState(false);
 
-  // Perubahan State: Menambahkan paymentMethod dan mengubah desc menjadi keterangan
   var [form, setForm] = useState({
-    date: new Date().toISOString().split('T')[0], ref: '', coa: '4100', desc: '', keterangan: '', amount: '', studentId: '', restriction: 'unrestricted', rkam: '', paymentMethod: 'Tunai'
+    date: new Date().toISOString().split('T')[0], ref: '', coa: '4100', desc: '', amount: '', studentId: '', restriction: 'unrestricted', rkam: '', paymentMethod: 'Tunai'
   });
   var [selectedBills, setSelectedBills] = useState([]); 
 
@@ -133,17 +132,25 @@ export default function App() {
   function handleInput(e) {
     var { name, value } = e.target;
     setForm(p => ({ ...p, [name]: value }));
-    if (name === 'studentId') { setSelectedBills([]); setForm(p => ({ ...p, studentId: value, desc: '', keterangan: '', amount: '' })); }
+    if (name === 'studentId') { setSelectedBills([]); setForm(p => ({ ...p, studentId: value, desc: '', amount: '' })); }
   }
 
   function toggleBill(bill) {
     var exists = selectedBills.find(b => b.billingId === bill.billingId);
-    if (exists) setSelectedBills(selectedBills.filter(b => b.billingId !== bill.billingId));
-    else setSelectedBills([...selectedBills, { ...bill, payAmount: bill.amountDue - bill.amountPaid }]);
+    if (exists) {
+      setSelectedBills(selectedBills.filter(b => b.billingId !== bill.billingId));
+    } else {
+      // Inisialisasi Keterangan kosong untuk setiap tagihan yang dicentang
+      setSelectedBills([...selectedBills, { ...bill, payAmount: bill.amountDue - bill.amountPaid, keterangan: '' }]);
+    }
   }
 
   function updatePayAmount(billingId, val) {
     setSelectedBills(selectedBills.map(b => b.billingId === billingId ? { ...b, payAmount: Number(val) } : b));
+  }
+
+  function updateBillKeterangan(billingId, val) {
+    setSelectedBills(selectedBills.map(b => b.billingId === billingId ? { ...b, keterangan: val } : b));
   }
 
   async function handleSubmit(e) {
@@ -168,10 +175,10 @@ export default function App() {
 
           let cleanCat = String(b.category || 'Tagihan').replace(/pembayaran/gi, '').trim();
           
-          // AUTO-DESKRIPSI: Digabung otomatis. Jika ada Keterangan, ditambahkan di belakang.
+          // AUTO-DESKRIPSI dengan Keterangan spesifik per-tagihan
           let finalDesc = `Pembayaran ${cleanCat}`;
-          if (form.keterangan) {
-            finalDesc = `${finalDesc} (Ket: ${form.keterangan})`;
+          if (b.keterangan && b.keterangan.trim() !== '') {
+            finalDesc = `${finalDesc} (Ket: ${b.keterangan})`;
           }
 
           await apiPost('addTransaction', {
@@ -197,7 +204,7 @@ export default function App() {
 
       alert('Transaksi Berhasil Dicatat!');
       setShowForm(false); setSelectedBills([]);
-      setForm({ date: new Date().toISOString().split('T')[0], ref: '', coa: '4100', desc: '', keterangan: '', amount: '', studentId: '', restriction: 'unrestricted', rkam: '', paymentMethod: 'Tunai' });
+      setForm({ date: new Date().toISOString().split('T')[0], ref: '', coa: '4100', desc: '', amount: '', studentId: '', restriction: 'unrestricted', rkam: '', paymentMethod: 'Tunai' });
       await loadData();
     } catch (e) { alert(e.message); setSync('error'); }
   }
@@ -373,9 +380,9 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* BARIS 2: METODE PEMBAYARAN (TOGGLE BESAR) & KETERANGAN */}
+                  {/* BARIS 2: METODE PEMBAYARAN & DESKRIPSI NON-SISWA */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-xl border">
-                    <div className="md:col-span-2">
+                    <div className={form.studentId ? "md:col-span-4" : "md:col-span-2"}>
                       <label className="text-xs font-bold text-slate-500 mb-2 block">METODE PEMBAYARAN</label>
                       <div className="flex gap-2">
                         <button type="button" onClick={() => setForm({...form, paymentMethod: 'Tunai'})} className={`flex-1 py-2 rounded-lg border-2 font-bold text-sm flex items-center justify-center gap-2 transition ${form.paymentMethod === 'Tunai' ? 'bg-emerald-600 border-emerald-600 text-white shadow' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100'}`}>
@@ -386,20 +393,12 @@ export default function App() {
                         </button>
                       </div>
                     </div>
-                    <div className="md:col-span-2">
-                      {/* Tampilan Input berbeda antara Siswa vs Non-Siswa */}
-                      {form.studentId ? (
-                        <>
-                          <label className="text-xs font-bold text-slate-500 mb-2 block">KETERANGAN TAMBAHAN (OPSIONAL)</label>
-                          <input type="text" name="keterangan" value={form.keterangan} onChange={handleInput} placeholder="Misal: Lunas via Bank BSI" className="w-full p-2 border rounded bg-white" />
-                        </>
-                      ) : (
-                        <>
-                          <label className="text-xs font-bold text-slate-500 mb-2 block">DESKRIPSI TRANSAKSI UMUM</label>
-                          <input type="text" name="desc" value={form.desc} onChange={handleInput} placeholder="Misal: Pembelian ATK Kantor" className="w-full p-2 border rounded bg-white" required />
-                        </>
-                      )}
-                    </div>
+                    {!form.studentId && (
+                      <div className="md:col-span-2">
+                        <label className="text-xs font-bold text-slate-500 mb-2 block">DESKRIPSI TRANSAKSI UMUM</label>
+                        <input type="text" name="desc" value={form.desc} onChange={handleInput} placeholder="Misal: Pembelian ATK Kantor" className="w-full p-2 border rounded bg-white" required />
+                      </div>
+                    )}
                   </div>
 
                   {/* KONDISI 1: JIKA TRANSAKSI SISWA (MULTI TAGIHAN) */}
@@ -412,18 +411,25 @@ export default function App() {
                             var isSelected = selectedBills.find(x => x.billingId === b.billingId);
                             var sisaPiutang = b.amountDue - b.amountPaid;
                             return (
-                              <div key={b.billingId} className={`flex flex-wrap items-center justify-between p-3 rounded-lg border-2 transition ${isSelected ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white'}`}>
-                                <div className="flex items-center gap-3">
+                              <div key={b.billingId} className={`flex flex-col p-3 rounded-lg border-2 transition ${isSelected ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white'}`}>
+                                <div className="flex items-center gap-3 w-full">
                                   <input type="checkbox" className="w-5 h-5 rounded cursor-pointer" checked={!!isSelected} onChange={() => toggleBill(b)} />
-                                  <div>
-                                    <p className="font-bold text-sm text-slate-800">{b.category}</p>
+                                  <div className="flex-1">
+                                    <p className="font-bold text-sm text-slate-800">{b.category || 'Tagihan (Tanpa Kategori)'}</p>
                                     <p className="text-xs text-rose-500 font-mono">Sisa: Rp {fmtCurrency(sisaPiutang)}</p>
                                   </div>
                                 </div>
+                                {/* INPUT KETERANGAN PER ITEM DITAMPILKAN DI SINI */}
                                 {isSelected && (
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold text-slate-500">Ubah Nominal Bayar: Rp</span>
-                                    <input type="number" max={sisaPiutang} value={isSelected.payAmount} onChange={(e) => updatePayAmount(b.billingId, e.target.value)} className="w-32 p-1 border border-emerald-300 rounded font-bold text-emerald-700 text-right" />
+                                  <div className="w-full mt-3 pt-3 border-t border-emerald-100 flex flex-col gap-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-bold text-slate-500 w-24">Catatan:</span>
+                                      <input type="text" placeholder="Misal: Bulan Juni" value={isSelected.keterangan || ''} onChange={(e) => updateBillKeterangan(b.billingId, e.target.value)} className="flex-1 p-1 border rounded text-xs bg-white" />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-bold text-slate-500 w-24">Bayar (Rp):</span>
+                                      <input type="number" max={sisaPiutang} value={isSelected.payAmount} onChange={(e) => updatePayAmount(b.billingId, e.target.value)} className="flex-1 p-1 border border-emerald-300 rounded font-bold text-emerald-700 text-right bg-white" />
+                                    </div>
                                   </div>
                                 )}
                               </div>
@@ -484,7 +490,6 @@ export default function App() {
                      </thead>
                      <tbody className="divide-y">
                        {transactions.slice().reverse().map((t, i) => {
-                         // Format Tanggal untuk Tabel
                          let tableDate = t.date;
                          if (t.date && String(t.date).includes('T')) {
                            tableDate = String(t.date).split('T')[0];

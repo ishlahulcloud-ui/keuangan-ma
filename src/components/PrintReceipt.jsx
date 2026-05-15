@@ -17,16 +17,13 @@ function terbilang(angka) {
 
 export function PrintReceiptButton({ transaction, allTransactions, institution, students }) {
   const handlePrint = () => {
-    // 1. Kumpulkan semua transaksi yang Nomor Kuitansinya (REF) sama
     const relatedTx = allTransactions.filter(t => t.ref === transaction.ref && t.type === 'IN');
     const total = relatedTx.reduce((sum, t) => sum + Number(t.amount), 0);
     
-    // 2. Data Siswa
     const student = students.find(s => String(s.studentId) === String(transaction.studentId));
     const studentName = student ? student.name : 'Siswa / Umum';
     const studentClass = student ? student.class : '-';
     
-    // 3. Format Tanggal (Menghilangkan T dan Z yang membingungkan)
     let displayDate = transaction.date;
     try {
       const d = new Date(transaction.date);
@@ -37,7 +34,6 @@ export function PrintReceiptButton({ transaction, allTransactions, institution, 
       }
     } catch(e) {}
 
-    // 4. Metode Pembayaran
     const paymentMethod = transaction.docRef || 'Tunai';
 
     const printWindow = window.open('', '_blank');
@@ -83,12 +79,15 @@ export function PrintReceiptButton({ transaction, allTransactions, institution, 
 
           <div class="items-container">
             <div class="font-bold" style="margin-bottom: 10px; font-size: 12px; color: #555;">RINCIAN PEMBAYARAN:</div>
-            ${relatedTx.map((t, index) => `
+            ${relatedTx.map((t, index) => {
+              // Menghapus tulisan " - Nama Siswa" agar cetakan rincian terlihat lebih bersih
+              const cleanDesc = t.desc.split(' - ')[0];
+              return `
               <div class="item-row">
-                <span style="flex: 1;">${index + 1}. ${t.desc}</span>
+                <span style="flex: 1;">${index + 1}. ${cleanDesc}</span>
                 <span>Rp ${new Intl.NumberFormat('id-ID').format(t.amount)}</span>
               </div>
-            `).join('')}
+            `}).join('')}
           </div>
 
           <div class="total-row">
