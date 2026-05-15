@@ -4,10 +4,8 @@ import {
   PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
 } from 'recharts';
 import {
-  Wallet, TrendingUp, Building, FileText, CheckCircle,
-  Plus, LayoutDashboard, List, Activity, AlertCircle, Download,
-  Lock, DollarSign, Users, FileBarChart, Save, LogOut,
-  RefreshCw, Wifi, WifiOff, ShoppingCart
+  Wallet, TrendingUp, FileText, CheckCircle, Plus, LayoutDashboard, List, Activity, 
+  AlertCircle, Download, Lock, DollarSign, Users, FileBarChart, Save, LogOut, RefreshCw, ShoppingCart
 } from 'lucide-react';
 
 import logoMts from './assets/logo-mts.png';
@@ -39,10 +37,11 @@ async function apiGet(action, params) {
   return data.data;
 }
 
-async function apiPost(action, payload) {
+// FIX ANONYMOUS BUG: Pastikan email dipassing eksplisit ke URL
+async function apiPost(action, payload, email = '') {
   var url = new URL(API_URL);
   url.searchParams.append('action', action);
-  url.searchParams.append('userEmail', currentUserEmail);
+  url.searchParams.append('userEmail', email || currentUserEmail);
   url.searchParams.append('payload', JSON.stringify(payload || {}));
   var response = await fetch(url.toString());
   var data = await response.json();
@@ -134,7 +133,7 @@ export default function App() {
   function handleInput(e) {
     var { name, value } = e.target;
     setForm(p => ({ ...p, [name]: value }));
-    if (name === 'studentId') { setSelectedBills([]); setForm(p => ({ ...p, studentId: value, desc: '', amount: '' })); }
+    if (name === 'studentId') { setSelectedBills([]); setForm(p => ({ ...p, studentId: value, amount: '' })); }
   }
 
   function toggleBill(bill) {
@@ -163,21 +162,23 @@ export default function App() {
           let targetCoa = '4100'; 
           let catLower = String(b.category).toLowerCase();
           
-          // Penambahan Kategori Mapping Baru
           if (catLower.includes('ppdb') || catLower.includes('pangkal') || catLower.includes('daftar ulang')) targetCoa = '4101';
           if (catLower.includes('pts') || catLower.includes('pas') || catLower.includes('pat') || catLower.includes('ujian')) targetCoa = '4102';
           if (catLower.includes('trip') || catLower.includes('kegiatan') || catLower.includes('akhir tahun')) targetCoa = '4302';
 
-          let cleanCat = String(b.category || 'Tagihan Sistem').replace(/pembayaran/gi, '').trim();
+          let cleanCat = String(b.category || 'Tagihan').replace(/pembayaran/gi, '').trim();
+
+          // FIX: Gabungkan Deskripsi Manual + Deskripsi Otomatis
+          let finalDesc = form.desc ? `${form.desc} - ${cleanCat}` : `Pembayaran ${cleanCat}`;
 
           await apiPost('addTransaction', {
             data: {
               date: form.date, ref: finalRef, 
-              desc: `Pembayaran ${cleanCat} (${b.month || 'Periode'}) - ${studentName}`,
+              desc: `${finalDesc} - ${studentName}`,
               coa: targetCoa, type: 'IN', amount: b.payAmount,
               restriction: form.restriction, studentId: form.studentId, billingId: b.billingId, rkam: form.rkam
             }
-          });
+          }, user.email); // Mengirim user.email secara eksplisit
         }
       } else {
         var ci = coa.find(c => c.code === form.coa);
@@ -186,7 +187,7 @@ export default function App() {
             ...form, ref: finalRef, amount: Number(form.amount), 
             type: ci?.category === 'PENDAPATAN' ? 'IN' : 'OUT', quarter: getQuarter(form.date)
           }
-        });
+        }, user.email); // Mengirim user.email secara eksplisit
       }
 
       alert('Transaksi Berhasil Dicatat!');
@@ -200,7 +201,7 @@ export default function App() {
     if (!window.confirm("Proses tagihan massal?")) return;
     setSync('syncing');
     try {
-      await apiPost('generateMassBilling', { data: params });
+      await apiPost('generateMassBilling', { data: params }, user.email);
       alert("Tagihan Berhasil Dibuat!");
       await loadData();
     } catch (e) { alert(e.message); setSync('error'); }
@@ -356,10 +357,13 @@ export default function App() {
 
               {showForm && (
                 <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-lg border-2 border-emerald-100 space-y-6">
+                  {/* BUG FIX DESKRIPSI: Kolom deskripsi kini selalu terlihat di paling atas */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div><label className="text-xs font-bold text-slate-500">TANGGAL</label><input type="date" name="date" value={form.date} onChange={handleInput} className="w-full p-2 border rounded" required /></div>
-                    <div><label className="text-xs font-bold text-slate-500">NO. KUITANSI (REF)</label><input type="text" name="ref" value={form.ref} onChange={handleInput} placeholder="Auto-generated" className="w-full p-2 border rounded" /></div>
-                    <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500">PILIH SISWA (UNTUK PELUNASAN PIUTANG)</label>
+                    <div><label className="text-xs font-bold text-slate-500">NO. KUITANSI</label><input type="text" name="ref" value={form.ref} onChange={handleInput} placeholder="Auto-generated" className="w-full p-2 border rounded" /></div>
+                    <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500">DESKRIPSI UMUM</label><input type="text" name="desc" value={form.desc} onChange={handleInput} placeholder="Misal: Pembayaran Titipan / Beli ATK" className="w-full p-2 border rounded" required /></div>
+                    
+                    <div className="md:col-span-4"><label className="text-xs font-bold text-slate-500">PILIH SISWA (OPSIONAL UNTUK PELUNASAN)</label>
                       <select name="studentId" value={form.studentId} onChange={handleInput} className="w-full p-2 border rounded bg-emerald-50">
                         <option value="">-- Non-Siswa (Penerimaan/Beban Umum) --</option>
                         {students.map(s => <option key={s.studentId} value={s.studentId}>{s.name} (Kls {s.class})</option>)}
@@ -380,7 +384,6 @@ export default function App() {
                                 <div className="flex items-center gap-3">
                                   <input type="checkbox" className="w-5 h-5 rounded" checked={!!isSelected} onChange={() => toggleBill(b)} />
                                   <div>
-                                    {/* BUG FIX: Tampilkan default jika data kosong dari database */}
                                     <p className="font-bold text-sm">{b.category || 'Tagihan (Tanpa Kategori)'}</p>
                                     <p className="text-xs text-rose-500 font-mono">Sisa: Rp {fmtCurrency(sisaPiutang)}</p>
                                   </div>
@@ -410,13 +413,12 @@ export default function App() {
 
                   {!form.studentId && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border">
-                      <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500">DESKRIPSI TRANSAKSI</label><input type="text" name="desc" value={form.desc} onChange={handleInput} placeholder="Misal: Pembelian Atk" className="w-full p-2 border rounded" required /></div>
                       <div><label className="text-xs font-bold text-slate-500">AKUN (COA)</label>
                         <select name="coa" value={form.coa} onChange={handleInput} className="w-full p-2 border rounded">
                           {coa.map(c => <option key={c.code} value={c.code}>[{c.code}] {c.name}</option>)}
                         </select>
                       </div>
-                      <div><label className="text-xs font-bold text-slate-500">NOMINAL (RP)</label><input type="number" name="amount" value={form.amount} onChange={handleInput} className="w-full p-2 border rounded" required /></div>
+                      <div><label className="text-xs font-bold text-slate-500">NOMINAL (RP)</label><input type="number" name="amount" value={form.amount} onChange={handleInput} className="w-full p-2 border rounded" required={!form.studentId} /></div>
                       <div><label className="text-xs font-bold text-slate-500">RKAM</label>
                         <select name="rkam" value={form.rkam} onChange={handleInput} className="w-full p-2 border rounded">
                           <option value="">-- Non-RKAM --</option>
@@ -458,7 +460,8 @@ export default function App() {
                            <td className="p-4 text-right text-emerald-600 font-bold">{t.type === 'IN' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td>
                            <td className="p-4 text-right text-rose-600 font-bold">{t.type === 'OUT' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td>
                            <td className="p-4 text-center">
-                              {t.type === 'IN' && <PrintReceiptButton transaction={t} institution="MTs Ishlahul Amanah" students={students} coaList={coa} />}
+                              {/* MEMPASSING SEMUA TRANSAKSI UNTUK DI-GROUPING DI STRUK FISIK */}
+                              {t.type === 'IN' && <PrintReceiptButton transaction={t} allTransactions={transactions} institution="MTs Ishlahul Amanah" students={students} />}
                            </td>
                          </tr>
                        ))}
