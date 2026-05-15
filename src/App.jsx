@@ -14,10 +14,6 @@ import logoMts from './assets/logo-mts.png';
 import { PrintReceiptButton } from './components/PrintReceipt';
 import { LaporanBulananButton } from './components/LaporanBulananPDF';
 
-// ============================================================================
-// KONFIGURASI & API
-// ============================================================================
-
 var API_URL = 'https://script.google.com/macros/s/AKfycby6YEPYvaVHFkM6TJ3hNxBYow1vYS_wOdc7W0tathGa0x0-yOYaCAVU17rVBdJ204V-/exec';
 var GOOGLE_CLIENT_ID = '1007043166010-rtbc31cshotnq5vlqtjdgf022vfkvt5b.apps.googleusercontent.com';
 var COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#6366f1', '#8b5cf6', '#ec4899'];
@@ -63,10 +59,6 @@ function fmtCurrency(val) {
   return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(val);
 }
 
-// ============================================================================
-// LOGIN PAGE
-// ============================================================================
-
 function LoginPage(props) {
   var [error, setError] = useState('');
   useEffect(() => {
@@ -99,10 +91,6 @@ function LoginPage(props) {
     </div>
   );
 }
-
-// ============================================================================
-// MAIN APP
-// ============================================================================
 
 export default function App() {
   var [user, setUser] = useState(null);
@@ -168,22 +156,26 @@ export default function App() {
       var finalRef = form.ref || "KW-" + new Date().getTime();
 
       if (form.studentId && selectedBills.length > 0) {
-        // SOLUSI BUG UNDEFINED: Cari nama siswa dengan aman, jika tidak ketemu gunakan kata 'Siswa'
-        var studentName = students.find(s => String(s.studentId) === String(form.studentId))?.name || 'Siswa';
+        // PERBAIKAN BUG NAMA SISWA UNDEFINED
+        var studentObj = students.find(s => String(s.studentId) === String(form.studentId));
+        var studentName = studentObj ? studentObj.name : 'Siswa';
 
         for (let b of selectedBills) {
           let targetCoa = '4100'; 
-          if (b.category.includes('PPDB')) targetCoa = '4101';
-          if (b.category.includes('PTS') || b.category.includes('PAS') || b.category.includes('PAT') || b.category.includes('Ujian')) targetCoa = '4102';
-          if (b.category.includes('Trip') || b.category.includes('Kegiatan')) targetCoa = '4302';
+          let catLower = String(b.category).toLowerCase();
+          if (catLower.includes('ppdb') || catLower.includes('pangkal')) targetCoa = '4101';
+          if (catLower.includes('pts') || catLower.includes('pas') || catLower.includes('pat') || catLower.includes('ujian')) targetCoa = '4102';
+          if (catLower.includes('trip') || catLower.includes('kegiatan')) targetCoa = '4302';
+
+          // Bersihkan kata 'Pembayaran' ganda di deskripsi
+          let cleanCat = String(b.category).replace(/pembayaran/gi, '').trim();
 
           await apiPost('addTransaction', {
             data: {
               date: form.date, ref: finalRef, 
-              // Deskripsi dibersihkan dari tanggal yang jelek
-              desc: `Pembayaran ${b.category} - ${studentName}`,
+              desc: `Pembayaran ${cleanCat} (${b.month}) - ${studentName}`,
               coa: targetCoa, type: 'IN', amount: b.payAmount,
-              restriction: form.restriction, studentId: form.studentId, billingId: b.billingId
+              restriction: form.restriction, studentId: form.studentId, billingId: b.billingId, rkam: form.rkam
             }
           });
         }
@@ -215,10 +207,11 @@ export default function App() {
   }
 
   // ==========================================================================
-  // ANALYTICS & DASHBOARD CHARTS (SUDAH DIKEMBALIKAN)
+  // ANALYTICS & DASHBOARD CHARTS (DIKEMBALIKAN UTUH)
   // ==========================================================================
   var analytics = useMemo(() => {
     var income = 0, expense = 0, incR = 0, expR = 0, spp = 0, usaha = 0, donasi = 0, donasiR = 0;
+    var rd = rkam.map(r => ({ code: r.code, name: r.name, budget: Number(r.budget), realization: 0, q1: 0, q2: 0, q3: 0, q4: 0 }));
     var qd = { Q1: { i: 0, o: 0 }, Q2: { i: 0, o: 0 }, Q3: { i: 0, o: 0 }, Q4: { i: 0, o: 0 } };
     
     transactions.forEach(t => {
@@ -239,42 +232,52 @@ export default function App() {
         if (rest) expR += a;
         if (qd[q]) qd[q].o += a;
       }
+      
+      if (t.rkam) { 
+        var idx = rd.findIndex(r => r.code === t.rkam); 
+        if (idx >= 0) { rd[idx].realization += a; rd[idx][q.toLowerCase()] += a; } 
+      }
     });
 
     return {
       balance: income - expense, income: income, expense: expense,
       surplus: income - expense, surplusUnrestricted: (income - incR) - (expense - expR),
+      totalInRestricted: incR, totalOutRestricted: expR,
+      rkamData: rd,
       incData: [
         { name: 'SPP/Pangkal', value: spp }, { name: 'Unit Usaha', value: usaha },
         { name: 'Donasi', value: donasi }, { name: 'Donasi Terikat', value: donasiR }
       ].filter(d => d.value > 0),
       cashFlow: ['Q1', 'Q2', 'Q3', 'Q4'].map(q => ({ quarter: q, masuk: qd[q].i, keluar: qd[q].o, saldo: qd[q].i - qd[q].o }))
     };
-  }, [transactions]);
+  }, [transactions, rkam]);
 
   if (!user) return <LoginPage onLogin={u => { setUser(u); localStorage.setItem('madrasah_user', JSON.stringify(u)); }} />;
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><RefreshCw className="animate-spin w-10 h-10 text-emerald-600" /></div>;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans">
-      {/* Sidebar */}
+    <div className="min-h-screen bg-slate-50 flex font-sans text-slate-800">
+      {/* Sidebar - DIKEMBALIKAN UTUH */}
       <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col">
         <div className="p-6 border-b border-slate-800 flex items-center gap-3">
           <img src={logoMts} className="w-8 h-8 object-contain" alt="Logo" />
-          <span className="font-bold">ISAK 35 Cloud</span>
+          <div><h1 className="font-bold text-lg leading-tight">MTs Ishlahul Amanah</h1><p className="text-xs text-slate-400">Sistem Keuangan Web</p></div>
         </div>
         <nav className="flex-1 p-4 space-y-1">
           <NB icon={<LayoutDashboard />} label="Dashboard" a={tab === 'dashboard'} oc={() => setTab('dashboard')} />
           <NB icon={<List />} label="Jurnal Umum" a={tab === 'jurnal'} oc={() => setTab('jurnal')} />
           <NB icon={<Users />} label="Data Siswa" a={tab === 'students'} oc={() => setTab('students')} />
-          <NB icon={<FileBarChart />} label="Laporan ISAK" a={tab === 'isak'} oc={() => setTab('isak')} />
+          <NB icon={<Activity />} label="Monitoring RKAM" a={tab === 'rkam'} oc={() => setTab('rkam')} />
+          <NB icon={<TrendingUp />} label="Proyeksi Kas" a={tab === 'cashflow'} oc={() => setTab('cashflow')} />
+          <NB icon={<DollarSign />} label="Dana Terikat" a={tab === 'restricted'} oc={() => setTab('restricted')} />
+          <NB icon={<FileText />} label="ISAK 35" a={tab === 'isak'} oc={() => setTab('isak')} />
         </nav>
         <div className="p-4 border-t border-slate-800">
            <div className="flex items-center gap-3 mb-4">
              <img src={user.picture} className="w-8 h-8 rounded-full" alt="" />
-             <div className="text-xs truncate"><b>{user.name}</b><br/>{user.role}</div>
+             <div className="text-xs truncate"><b>{user.name}</b><br/>{user.role.toUpperCase()}</div>
            </div>
-           <button onClick={() => { localStorage.removeItem('madrasah_user'); window.location.reload(); }} className="w-full text-xs bg-rose-600 p-2 rounded flex items-center justify-center gap-2"><LogOut className="w-3 h-3"/> Logout</button>
+           <button onClick={() => { localStorage.removeItem('madrasah_user'); window.location.reload(); }} className="w-full text-xs bg-rose-600 hover:bg-rose-700 p-2 rounded flex items-center justify-center gap-2 transition"><LogOut className="w-3 h-3"/> Logout</button>
         </div>
       </aside>
 
@@ -295,9 +298,9 @@ export default function App() {
           {tab === 'dashboard' && (
             <div className="space-y-6 max-w-6xl mx-auto">
                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 <CD t="Saldo Kas" v={"Rp " + fmtCurrency(analytics.balance)} ic={<Wallet className="text-emerald-600"/>} />
-                 <CD t="Pendapatan (Accrual)" v={"Rp " + fmtCurrency(analytics.income)} ic={<TrendingUp className="text-blue-600"/>} />
-                 <CD t="Total Beban" v={"Rp " + fmtCurrency(analytics.expense)} ic={<Activity className="text-rose-600"/>} />
+                 <CD t="Saldo Kas" v={"Rp " + fmtCurrency(analytics.balance)} ic={<Wallet className="text-emerald-600 w-6 h-6"/>} />
+                 <CD t="Total Pendapatan" v={"Rp " + fmtCurrency(analytics.income)} s={"Terikat: Rp " + fmtCurrency(analytics.totalInRestricted)} ic={<TrendingUp className="text-blue-600 w-6 h-6"/>} />
+                 <CD t="Surplus / Defisit" v={"Rp " + fmtCurrency(analytics.surplus)} ic={<CheckCircle className="text-amber-500 w-6 h-6"/>} />
                </div>
                
                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -315,21 +318,29 @@ export default function App() {
                        </ResponsiveContainer>
                      </div>
                   </div>
+
                   <div className="bg-white p-6 rounded-xl shadow-sm border">
-                     <h3 className="font-bold mb-4">Tren Kas Kuartalan</h3>
-                     <div className="h-64">
-                       <ResponsiveContainer>
-                         <AreaChart data={analytics.cashFlow}>
-                           <CartesianGrid strokeDasharray="3 3" />
-                           <XAxis dataKey="quarter" />
-                           <YAxis tickFormatter={v => (v / 1000000) + 'M'} />
-                           <RechartsTooltip formatter={v => 'Rp ' + fmtCurrency(v)} />
-                           <Legend />
-                           <Area type="monotone" dataKey="masuk" stackId="1" stroke="#10b981" fill="#10b981" name="Masuk" />
-                           <Area type="monotone" dataKey="keluar" stackId="2" stroke="#ef4444" fill="#ef4444" name="Keluar" />
-                         </AreaChart>
-                       </ResponsiveContainer>
-                     </div>
+                    <div className="flex items-center gap-2 mb-2"><AlertCircle className="text-rose-500 w-5 h-5" /><h3 className="font-bold text-rose-600">Mitigasi Pajak (PMK 68/2020)</h3></div>
+                    <p className="text-sm text-slate-600 mb-4">Surplus wajib direinvestasikan ke Sarpras dalam 4 tahun.</p>
+                    <div className="flex justify-between text-sm mb-1 font-medium"><span>Surplus Tanpa Pembatasan</span><span className="text-emerald-600">Rp {fmtCurrency(analytics.surplusUnrestricted)}</span></div>
+                    <div className="w-full bg-slate-100 rounded-full h-2.5"><div className="bg-rose-400 h-2.5 rounded-full" style={{ width: '15%' }}></div></div>
+                  </div>
+               </div>
+
+               <div className="bg-white p-6 rounded-xl shadow-sm border">
+                  <h3 className="font-bold mb-4">Tren Kas Kuartalan</h3>
+                  <div className="h-64">
+                    <ResponsiveContainer>
+                      <AreaChart data={analytics.cashFlow}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="quarter" />
+                        <YAxis tickFormatter={v => (v / 1000000) + 'M'} />
+                        <RechartsTooltip formatter={v => 'Rp ' + fmtCurrency(v)} />
+                        <Legend />
+                        <Area type="monotone" dataKey="masuk" stackId="1" stroke="#10b981" fill="#10b981" name="Masuk" />
+                        <Area type="monotone" dataKey="keluar" stackId="2" stroke="#ef4444" fill="#ef4444" name="Keluar" />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
                </div>
             </div>
@@ -529,6 +540,63 @@ export default function App() {
              </div>
           )}
 
+          {/* TAB RKAM */}
+          {tab === 'rkam' && (
+            <div className="space-y-6 max-w-6xl mx-auto">
+              <h2 className="text-2xl font-bold">Monitoring RKAM</h2>
+              <div className="bg-white p-6 rounded-xl shadow-sm border">
+                <div className="h-80 mb-8">
+                  <ResponsiveContainer>
+                    <BarChart data={analytics.rkamData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="code" />
+                      <YAxis tickFormatter={v => (v / 1000000) + 'M'} />
+                      <RechartsTooltip formatter={v => 'Rp ' + fmtCurrency(v)} />
+                      <Legend />
+                      <Bar dataKey="budget" name="Pagu" fill="#cbd5e1" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="realization" name="Realisasi" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB KAS */}
+          {tab === 'cashflow' && (
+            <div className="space-y-6 max-w-6xl mx-auto">
+              <h2 className="text-2xl font-bold">Proyeksi Arus Kas</h2>
+              <div className="bg-white p-6 rounded-xl shadow-sm border">
+                <div className="h-80">
+                  <ResponsiveContainer>
+                    <LineChart data={analytics.cashFlow}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="quarter" />
+                      <YAxis tickFormatter={v => (v / 1000000) + 'M'} />
+                      <RechartsTooltip formatter={v => 'Rp ' + fmtCurrency(v)} />
+                      <Legend />
+                      <Line type="monotone" dataKey="masuk" stroke="#10b981" strokeWidth={2} name="Masuk" />
+                      <Line type="monotone" dataKey="keluar" stroke="#ef4444" strokeWidth={2} name="Keluar" />
+                      <Line type="monotone" dataKey="saldo" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" name="Saldo" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB DANA TERIKAT */}
+          {tab === 'restricted' && (
+            <div className="space-y-6 max-w-6xl mx-auto">
+              <h2 className="text-2xl font-bold">Dana Terikat</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white p-5 rounded-xl shadow-sm border border-amber-200"><div className="flex items-center gap-2 mb-3"><Lock className="w-5 h-5 text-amber-600" /><h4 className="font-bold">Diterima</h4></div><div className="text-2xl font-bold text-amber-600">Rp {fmtCurrency(analytics.totalInRestricted)}</div></div>
+                <div className="bg-white p-5 rounded-xl shadow-sm border border-emerald-200"><div className="flex items-center gap-2 mb-3"><CheckCircle className="w-5 h-5 text-emerald-600" /><h4 className="font-bold">Tersalurkan</h4></div><div className="text-2xl font-bold text-emerald-600">Rp {fmtCurrency(analytics.totalOutRestricted)}</div></div>
+                <div className="bg-white p-5 rounded-xl shadow-sm border border-blue-200"><div className="flex items-center gap-2 mb-3"><Wallet className="w-5 h-5 text-blue-600" /><h4 className="font-bold">Saldo</h4></div><div className="text-2xl font-bold text-blue-600">Rp {fmtCurrency(analytics.totalInRestricted - analytics.totalOutRestricted)}</div></div>
+              </div>
+            </div>
+          )}
+
           {/* TAB ISAK 35 */}
           {tab === 'isak' && (
             <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg border">
@@ -536,7 +604,7 @@ export default function App() {
                 <h3 className="text-2xl font-bold uppercase">Laporan Penghasilan Komprehensif</h3>
                 <p className="text-slate-500">Berdasarkan Standar ISAK 35 (Entitas Non-Laba)</p>
               </div>
-              <p className="text-center text-slate-400 italic">Gunakan tombol "Export" di masing-masing tab untuk detail laporan TXT/CSV.</p>
+              <p className="text-center text-slate-400 italic">Gunakan tombol "Laporan Bulanan" di tab Jurnal Umum untuk export detail laporan PDF.</p>
             </div>
           )}
         </div>
@@ -545,7 +613,6 @@ export default function App() {
   );
 }
 
-// Sub-components
 function NB({ icon, label, a, oc }) {
   return (
     <button onClick={oc} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition text-sm font-medium ${a ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
