@@ -116,11 +116,10 @@ export default function App() {
   var [sync, setSync] = useState('synced');
   var [showForm, setShowForm] = useState(false);
 
-  // Form State
   var [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0], ref: '', coa: '4100', desc: '', amount: '', studentId: '', restriction: 'unrestricted', rkam: ''
   });
-  var [selectedBills, setSelectedBills] = useState([]); // Keranjang Tagihan
+  var [selectedBills, setSelectedBills] = useState([]); 
 
   useEffect(() => {
     var saved = localStorage.getItem('madrasah_user');
@@ -150,17 +149,12 @@ export default function App() {
     if (name === 'studentId') { setSelectedBills([]); setForm(p => ({ ...p, studentId: value, desc: '', amount: '' })); }
   }
 
-  // Toggle Pilihan Tagihan
   function toggleBill(bill) {
     var exists = selectedBills.find(b => b.billingId === bill.billingId);
-    if (exists) {
-      setSelectedBills(selectedBills.filter(b => b.billingId !== bill.billingId));
-    } else {
-      setSelectedBills([...selectedBills, { ...bill, payAmount: bill.amountDue - bill.amountPaid }]);
-    }
+    if (exists) setSelectedBills(selectedBills.filter(b => b.billingId !== bill.billingId));
+    else setSelectedBills([...selectedBills, { ...bill, payAmount: bill.amountDue - bill.amountPaid }]);
   }
 
-  // Update nominal bayar per tagihan di keranjang
   function updatePayAmount(billingId, val) {
     setSelectedBills(selectedBills.map(b => b.billingId === billingId ? { ...b, payAmount: Number(val) } : b));
   }
@@ -171,14 +165,14 @@ export default function App() {
     setSync('syncing');
 
     try {
-      // 1. Generate No Ref Tunggal untuk Audit Trail jika kosong
       var finalRef = form.ref || "KW-" + new Date().getTime();
 
       if (form.studentId && selectedBills.length > 0) {
-        // MULTI-TRANSACTION (Jurnal Majemuk)
+        // SOLUSI BUG UNDEFINED: Cari nama siswa dengan aman, jika tidak ketemu gunakan kata 'Siswa'
+        var studentName = students.find(s => String(s.studentId) === String(form.studentId))?.name || 'Siswa';
+
         for (let b of selectedBills) {
-          // Mapping Akun Otomatis
-          let targetCoa = '4100'; // Default SPP
+          let targetCoa = '4100'; 
           if (b.category.includes('PPDB')) targetCoa = '4101';
           if (b.category.includes('PTS') || b.category.includes('PAS') || b.category.includes('PAT') || b.category.includes('Ujian')) targetCoa = '4102';
           if (b.category.includes('Trip') || b.category.includes('Kegiatan')) targetCoa = '4302';
@@ -186,14 +180,14 @@ export default function App() {
           await apiPost('addTransaction', {
             data: {
               date: form.date, ref: finalRef, 
-              desc: `Pembayaran ${b.category} (${b.month}) - ${students.find(s => s.studentId === form.studentId)?.name}`,
+              // Deskripsi dibersihkan dari tanggal yang jelek
+              desc: `Pembayaran ${b.category} - ${studentName}`,
               coa: targetCoa, type: 'IN', amount: b.payAmount,
               restriction: form.restriction, studentId: form.studentId, billingId: b.billingId
             }
           });
         }
       } else {
-        // SINGLE TRANSACTION (Umum)
         var ci = coa.find(c => c.code === form.coa);
         await apiPost('addTransaction', {
           data: {
@@ -220,14 +214,42 @@ export default function App() {
     } catch (e) { alert(e.message); setSync('error'); }
   }
 
-  // Analytics
+  // ==========================================================================
+  // ANALYTICS & DASHBOARD CHARTS (SUDAH DIKEMBALIKAN)
+  // ==========================================================================
   var analytics = useMemo(() => {
-    var inc = 0, exp = 0, bal = 0;
+    var income = 0, expense = 0, incR = 0, expR = 0, spp = 0, usaha = 0, donasi = 0, donasiR = 0;
+    var qd = { Q1: { i: 0, o: 0 }, Q2: { i: 0, o: 0 }, Q3: { i: 0, o: 0 }, Q4: { i: 0, o: 0 } };
+    
     transactions.forEach(t => {
       var a = Number(t.amount || 0);
-      if (t.type === 'IN') inc += a; else exp += a;
+      var q = t.quarter || getQuarter(t.date);
+      var rest = t.restriction && t.restriction !== 'unrestricted';
+
+      if (t.type === 'IN') {
+        income += a;
+        if (rest) incR += a;
+        if (qd[q]) qd[q].i += a;
+        if (String(t.coa) === '4100' || String(t.coa) === '4101') spp += a;
+        if (String(t.coa) === '4200') usaha += a;
+        if (String(t.coa) === '4300') donasi += a;
+        if (String(t.coa) === '4301' || String(t.coa) === '4302') donasiR += a;
+      } else {
+        expense += a;
+        if (rest) expR += a;
+        if (qd[q]) qd[q].o += a;
+      }
     });
-    return { balance: inc - exp, income: inc, expense: exp };
+
+    return {
+      balance: income - expense, income: income, expense: expense,
+      surplus: income - expense, surplusUnrestricted: (income - incR) - (expense - expR),
+      incData: [
+        { name: 'SPP/Pangkal', value: spp }, { name: 'Unit Usaha', value: usaha },
+        { name: 'Donasi', value: donasi }, { name: 'Donasi Terikat', value: donasiR }
+      ].filter(d => d.value > 0),
+      cashFlow: ['Q1', 'Q2', 'Q3', 'Q4'].map(q => ({ quarter: q, masuk: qd[q].i, keluar: qd[q].o, saldo: qd[q].i - qd[q].o }))
+    };
   }, [transactions]);
 
   if (!user) return <LoginPage onLogin={u => { setUser(u); localStorage.setItem('madrasah_user', JSON.stringify(u)); }} />;
@@ -268,7 +290,8 @@ export default function App() {
         </header>
 
         <div className="flex-1 overflow-auto p-4 md:p-8">
-          {/* DASHBOARD */}
+          
+          {/* DASHBOARD DENGAN GRAFIK YANG SUDAH DIKEMBALIKAN */}
           {tab === 'dashboard' && (
             <div className="space-y-6 max-w-6xl mx-auto">
                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -276,7 +299,39 @@ export default function App() {
                  <CD t="Pendapatan (Accrual)" v={"Rp " + fmtCurrency(analytics.income)} ic={<TrendingUp className="text-blue-600"/>} />
                  <CD t="Total Beban" v={"Rp " + fmtCurrency(analytics.expense)} ic={<Activity className="text-rose-600"/>} />
                </div>
-               {/* Tambahkan Chart disini jika perlu */}
+               
+               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-white p-6 rounded-xl shadow-sm border">
+                     <h3 className="font-bold mb-4">Komposisi Pendapatan</h3>
+                     <div className="h-64">
+                       <ResponsiveContainer>
+                         <PieChart>
+                           <Pie data={analytics.incData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" label>
+                             {analytics.incData.map((e, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                           </Pie>
+                           <RechartsTooltip formatter={v => 'Rp ' + fmtCurrency(v)} />
+                           <Legend />
+                         </PieChart>
+                       </ResponsiveContainer>
+                     </div>
+                  </div>
+                  <div className="bg-white p-6 rounded-xl shadow-sm border">
+                     <h3 className="font-bold mb-4">Tren Kas Kuartalan</h3>
+                     <div className="h-64">
+                       <ResponsiveContainer>
+                         <AreaChart data={analytics.cashFlow}>
+                           <CartesianGrid strokeDasharray="3 3" />
+                           <XAxis dataKey="quarter" />
+                           <YAxis tickFormatter={v => (v / 1000000) + 'M'} />
+                           <RechartsTooltip formatter={v => 'Rp ' + fmtCurrency(v)} />
+                           <Legend />
+                           <Area type="monotone" dataKey="masuk" stackId="1" stroke="#10b981" fill="#10b981" name="Masuk" />
+                           <Area type="monotone" dataKey="keluar" stackId="2" stroke="#ef4444" fill="#ef4444" name="Keluar" />
+                         </AreaChart>
+                       </ResponsiveContainer>
+                     </div>
+                  </div>
+               </div>
             </div>
           )}
 
@@ -304,7 +359,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* KONDISI 1: JIKA BAYAR TAGIHAN SISWA (MULTI-CHECKOUT) */}
                   {form.studentId && (
                     <div className="bg-slate-50 p-4 rounded-xl border">
                       <h4 className="font-bold text-emerald-700 mb-4 flex items-center gap-2"><ShoppingCart className="w-4 h-4"/> Daftar Tagihan Aktif</h4>
@@ -312,19 +366,20 @@ export default function App() {
                         {billings.filter(b => String(b.studentId) === String(form.studentId) && b.status !== 'LUNAS' && b.status !== 'PAID').length > 0 ? (
                           billings.filter(b => String(b.studentId) === String(form.studentId) && b.status !== 'LUNAS' && b.status !== 'PAID').map(b => {
                             var isSelected = selectedBills.find(x => x.billingId === b.billingId);
+                            var sisaPiutang = b.amountDue - b.amountPaid;
                             return (
                               <div key={b.billingId} className={`flex flex-wrap items-center justify-between p-3 rounded-lg border-2 transition ${isSelected ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white'}`}>
                                 <div className="flex items-center gap-3">
                                   <input type="checkbox" className="w-5 h-5 rounded" checked={!!isSelected} onChange={() => toggleBill(b)} />
                                   <div>
-                                    <p className="font-bold text-sm">{b.category} <span className="text-slate-400 font-normal">({b.month})</span></p>
-                                    <p className="text-xs text-rose-500 font-mono">Sisa: Rp {fmtCurrency(b.amountDue - b.amountPaid)}</p>
+                                    <p className="font-bold text-sm">{b.category}</p>
+                                    <p className="text-xs text-rose-500 font-mono">Sisa: Rp {fmtCurrency(sisaPiutang)}</p>
                                   </div>
                                 </div>
                                 {isSelected && (
                                   <div className="flex items-center gap-2">
                                     <span className="text-xs font-bold">Bayar: Rp</span>
-                                    <input type="number" value={isSelected.payAmount} onChange={(e) => updatePayAmount(b.billingId, e.target.value)} className="w-32 p-1 border rounded font-bold text-emerald-700" />
+                                    <input type="number" max={sisaPiutang} value={isSelected.payAmount} onChange={(e) => updatePayAmount(b.billingId, e.target.value)} className="w-32 p-1 border rounded font-bold text-emerald-700" />
                                   </div>
                                 )}
                               </div>
@@ -344,7 +399,6 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* KONDISI 2: JIKA TRANSAKSI UMUM (NON-SISWA) */}
                   {!form.studentId && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border">
                       <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500">DESKRIPSI TRANSAKSI</label><input type="text" name="desc" value={form.desc} onChange={handleInput} placeholder="Misal: Pembelian Atk" className="w-full p-2 border rounded" required /></div>
@@ -370,7 +424,6 @@ export default function App() {
                 </form>
               )}
 
-              {/* Tabel Jurnal */}
               <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
                 <div className="overflow-x-auto">
                    <table className="w-full text-left text-sm whitespace-nowrap">
@@ -483,8 +536,7 @@ export default function App() {
                 <h3 className="text-2xl font-bold uppercase">Laporan Penghasilan Komprehensif</h3>
                 <p className="text-slate-500">Berdasarkan Standar ISAK 35 (Entitas Non-Laba)</p>
               </div>
-              {/* Logika Laporan ISAK 35 sama seperti sebelumnya... */}
-              <p className="text-center text-slate-400 italic">Gunakan tombol "Export" di masing-masing tab untuk detail.</p>
+              <p className="text-center text-slate-400 italic">Gunakan tombol "Export" di masing-masing tab untuk detail laporan TXT/CSV.</p>
             </div>
           )}
         </div>
