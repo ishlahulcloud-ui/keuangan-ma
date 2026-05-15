@@ -1,7 +1,6 @@
 import React from 'react';
 import { Printer } from 'lucide-react';
 
-// Fungsi pengubah angka menjadi teks (Terbilang)
 function terbilang(angka) {
   var bilangan = ['','Satu','Dua','Tiga','Empat','Lima','Enam','Tujuh','Delapan','Sembilan','Sepuluh','Sebelas'];
   var hasil = '';
@@ -18,15 +17,28 @@ function terbilang(angka) {
 
 export function PrintReceiptButton({ transaction, allTransactions, institution, students }) {
   const handlePrint = () => {
-    // KUNCI PENGGABUNGAN: Cari semua transaksi dengan Nomor REF yang sama persis
+    // 1. Kumpulkan semua transaksi yang Nomor Kuitansinya (REF) sama
     const relatedTx = allTransactions.filter(t => t.ref === transaction.ref && t.type === 'IN');
     const total = relatedTx.reduce((sum, t) => sum + Number(t.amount), 0);
     
-    // Identifikasi Siswa & Metode Pembayaran (Disimpan di kolom docRef)
+    // 2. Data Siswa
     const student = students.find(s => String(s.studentId) === String(transaction.studentId));
     const studentName = student ? student.name : 'Siswa / Umum';
     const studentClass = student ? student.class : '-';
-    const paymentMethod = transaction.docRef || 'Tunai'; // Default Tunai jika kosong
+    
+    // 3. Format Tanggal (Menghilangkan T dan Z yang membingungkan)
+    let displayDate = transaction.date;
+    try {
+      const d = new Date(transaction.date);
+      if(!isNaN(d.getTime())) {
+        displayDate = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      } else if (transaction.date.includes('T')) {
+        displayDate = transaction.date.split('T')[0];
+      }
+    } catch(e) {}
+
+    // 4. Metode Pembayaran
+    const paymentMethod = transaction.docRef || 'Tunai';
 
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
@@ -47,7 +59,7 @@ export function PrintReceiptButton({ transaction, allTransactions, institution, 
             .items-container { border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 15px 0; margin-bottom: 15px; }
             .item-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; }
             .total-row { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
-            .terbilang { font-style: italic; font-size: 13px; }
+            .terbilang { font-style: italic; font-size: 13px; margin-bottom: 20px; }
             .signatures { display: flex; justify-content: space-between; margin-top: 40px; font-size: 14px; }
             .sign-box { text-align: center; width: 200px; }
             .sign-line { border-top: 1px solid #000; margin-top: 60px; padding-top: 5px; }
@@ -62,25 +74,15 @@ export function PrintReceiptButton({ transaction, allTransactions, institution, 
           </div>
 
           <table>
-            <tr>
-              <td class="col-label">No. Resi</td><td class="col-separator">:</td><td>${transaction.ref}</td>
-            </tr>
-            <tr>
-              <td class="col-label">Tanggal</td><td class="col-separator">:</td><td>${transaction.date}</td>
-            </tr>
-            <tr>
-              <td class="col-label">Nama</td><td class="col-separator">:</td><td class="font-bold">${studentName}</td>
-            </tr>
-            <tr>
-              <td class="col-label">Kelas</td><td class="col-separator">:</td><td>${studentClass}</td>
-            </tr>
-            <tr>
-              <td class="col-label">Pembayaran</td><td class="col-separator">:</td><td>${paymentMethod}</td>
-            </tr>
+            <tr><td class="col-label">No. Resi</td><td class="col-separator">:</td><td>${transaction.ref}</td></tr>
+            <tr><td class="col-label">Tanggal</td><td class="col-separator">:</td><td>${displayDate}</td></tr>
+            <tr><td class="col-label">Nama</td><td class="col-separator">:</td><td class="font-bold">${studentName}</td></tr>
+            <tr><td class="col-label">Kelas</td><td class="col-separator">:</td><td>${studentClass}</td></tr>
+            <tr><td class="col-label">Pembayaran</td><td class="col-separator">:</td><td class="font-bold">${paymentMethod}</td></tr>
           </table>
 
           <div class="items-container">
-            <div class="font-bold" style="margin-bottom: 10px;">DESKRIPSI PEMBAYARAN:</div>
+            <div class="font-bold" style="margin-bottom: 10px; font-size: 12px; color: #555;">RINCIAN PEMBAYARAN:</div>
             ${relatedTx.map((t, index) => `
               <div class="item-row">
                 <span style="flex: 1;">${index + 1}. ${t.desc}</span>
@@ -108,7 +110,7 @@ export function PrintReceiptButton({ transaction, allTransactions, institution, 
           </div>
 
           <div class="footer-notes">
-            <p><strong>Syarat dan Ketentuan:</strong></p>
+            <p><strong>Catatan:</strong></p>
             <ol style="margin-top: 5px; padding-left: 15px;">
               <li>Semua biaya bersifat non-refundable (tidak dapat dikembalikan).</li>
               <li>Simpanlah kuitansi ini sebagai bukti pembayaran yang sah.</li>

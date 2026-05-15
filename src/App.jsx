@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   Wallet, TrendingUp, FileText, CheckCircle, Plus, LayoutDashboard, List, Activity, 
-  AlertCircle, Download, Lock, DollarSign, Users, FileBarChart, Save, LogOut, RefreshCw, ShoppingCart
+  AlertCircle, Lock, DollarSign, Users, FileBarChart, Save, LogOut, RefreshCw, ShoppingCart, CreditCard
 } from 'lucide-react';
 
 import logoMts from './assets/logo-mts.png';
@@ -37,7 +37,6 @@ async function apiGet(action, params) {
   return data.data;
 }
 
-// FIX ANONYMOUS BUG: Pastikan email dipassing eksplisit ke URL
 async function apiPost(action, payload, email = '') {
   var url = new URL(API_URL);
   url.searchParams.append('action', action);
@@ -103,8 +102,9 @@ export default function App() {
   var [sync, setSync] = useState('synced');
   var [showForm, setShowForm] = useState(false);
 
+  // Perubahan State: Menambahkan paymentMethod dan mengubah desc menjadi keterangan
   var [form, setForm] = useState({
-    date: new Date().toISOString().split('T')[0], ref: '', coa: '4100', desc: '', amount: '', studentId: '', restriction: 'unrestricted', rkam: ''
+    date: new Date().toISOString().split('T')[0], ref: '', coa: '4100', desc: '', keterangan: '', amount: '', studentId: '', restriction: 'unrestricted', rkam: '', paymentMethod: 'Tunai'
   });
   var [selectedBills, setSelectedBills] = useState([]); 
 
@@ -133,7 +133,7 @@ export default function App() {
   function handleInput(e) {
     var { name, value } = e.target;
     setForm(p => ({ ...p, [name]: value }));
-    if (name === 'studentId') { setSelectedBills([]); setForm(p => ({ ...p, studentId: value, amount: '' })); }
+    if (name === 'studentId') { setSelectedBills([]); setForm(p => ({ ...p, studentId: value, desc: '', keterangan: '', amount: '' })); }
   }
 
   function toggleBill(bill) {
@@ -167,32 +167,37 @@ export default function App() {
           if (catLower.includes('trip') || catLower.includes('kegiatan') || catLower.includes('akhir tahun')) targetCoa = '4302';
 
           let cleanCat = String(b.category || 'Tagihan').replace(/pembayaran/gi, '').trim();
-
-          // FIX: Gabungkan Deskripsi Manual + Deskripsi Otomatis
-          let finalDesc = form.desc ? `${form.desc} - ${cleanCat}` : `Pembayaran ${cleanCat}`;
+          
+          // AUTO-DESKRIPSI: Digabung otomatis. Jika ada Keterangan, ditambahkan di belakang.
+          let finalDesc = `Pembayaran ${cleanCat}`;
+          if (form.keterangan) {
+            finalDesc = `${finalDesc} (Ket: ${form.keterangan})`;
+          }
 
           await apiPost('addTransaction', {
             data: {
               date: form.date, ref: finalRef, 
               desc: `${finalDesc} - ${studentName}`,
               coa: targetCoa, type: 'IN', amount: b.payAmount,
-              restriction: form.restriction, studentId: form.studentId, billingId: b.billingId, rkam: form.rkam
+              restriction: form.restriction, studentId: form.studentId, billingId: b.billingId, rkam: form.rkam,
+              docRef: form.paymentMethod
             }
-          }, user.email); // Mengirim user.email secara eksplisit
+          }, user.email);
         }
       } else {
         var ci = coa.find(c => c.code === form.coa);
         await apiPost('addTransaction', {
           data: {
             ...form, ref: finalRef, amount: Number(form.amount), 
-            type: ci?.category === 'PENDAPATAN' ? 'IN' : 'OUT', quarter: getQuarter(form.date)
+            type: ci?.category === 'PENDAPATAN' ? 'IN' : 'OUT', quarter: getQuarter(form.date),
+            docRef: form.paymentMethod
           }
-        }, user.email); // Mengirim user.email secara eksplisit
+        }, user.email);
       }
 
       alert('Transaksi Berhasil Dicatat!');
       setShowForm(false); setSelectedBills([]);
-      setForm({ date: new Date().toISOString().split('T')[0], ref: '', coa: '4100', desc: '', amount: '', studentId: '', restriction: 'unrestricted', rkam: '' });
+      setForm({ date: new Date().toISOString().split('T')[0], ref: '', coa: '4100', desc: '', keterangan: '', amount: '', studentId: '', restriction: 'unrestricted', rkam: '', paymentMethod: 'Tunai' });
       await loadData();
     } catch (e) { alert(e.message); setSync('error'); }
   }
@@ -207,9 +212,6 @@ export default function App() {
     } catch (e) { alert(e.message); setSync('error'); }
   }
 
-  // ==========================================================================
-  // ANALYTICS & DASHBOARD CHARTS
-  // ==========================================================================
   var analytics = useMemo(() => {
     var income = 0, expense = 0, incR = 0, expR = 0, spp = 0, usaha = 0, donasi = 0, donasiR = 0;
     var rd = rkam.map(r => ({ code: r.code, name: r.name, budget: Number(r.budget), realization: 0, q1: 0, q2: 0, q3: 0, q4: 0 }));
@@ -357,13 +359,13 @@ export default function App() {
 
               {showForm && (
                 <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-lg border-2 border-emerald-100 space-y-6">
-                  {/* BUG FIX DESKRIPSI: Kolom deskripsi kini selalu terlihat di paling atas */}
+                  
+                  {/* BARIS 1: DATA UTAMA */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div><label className="text-xs font-bold text-slate-500">TANGGAL</label><input type="date" name="date" value={form.date} onChange={handleInput} className="w-full p-2 border rounded" required /></div>
-                    <div><label className="text-xs font-bold text-slate-500">NO. KUITANSI</label><input type="text" name="ref" value={form.ref} onChange={handleInput} placeholder="Auto-generated" className="w-full p-2 border rounded" /></div>
-                    <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500">DESKRIPSI UMUM</label><input type="text" name="desc" value={form.desc} onChange={handleInput} placeholder="Misal: Pembayaran Titipan / Beli ATK" className="w-full p-2 border rounded" required /></div>
-                    
-                    <div className="md:col-span-4"><label className="text-xs font-bold text-slate-500">PILIH SISWA (OPSIONAL UNTUK PELUNASAN)</label>
+                    <div><label className="text-xs font-bold text-slate-500">NO. KUITANSI (REF)</label><input type="text" name="ref" value={form.ref} onChange={handleInput} placeholder="Auto-generated" className="w-full p-2 border rounded" /></div>
+                    <div className="md:col-span-2">
+                      <label className="text-xs font-bold text-slate-500">PILIH SISWA (UNTUK PELUNASAN PIUTANG)</label>
                       <select name="studentId" value={form.studentId} onChange={handleInput} className="w-full p-2 border rounded bg-emerald-50">
                         <option value="">-- Non-Siswa (Penerimaan/Beban Umum) --</option>
                         {students.map(s => <option key={s.studentId} value={s.studentId}>{s.name} (Kls {s.class})</option>)}
@@ -371,9 +373,39 @@ export default function App() {
                     </div>
                   </div>
 
+                  {/* BARIS 2: METODE PEMBAYARAN (TOGGLE BESAR) & KETERANGAN */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-xl border">
+                    <div className="md:col-span-2">
+                      <label className="text-xs font-bold text-slate-500 mb-2 block">METODE PEMBAYARAN</label>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => setForm({...form, paymentMethod: 'Tunai'})} className={`flex-1 py-2 rounded-lg border-2 font-bold text-sm flex items-center justify-center gap-2 transition ${form.paymentMethod === 'Tunai' ? 'bg-emerald-600 border-emerald-600 text-white shadow' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100'}`}>
+                          <Wallet className="w-4 h-4"/> TUNAI
+                        </button>
+                        <button type="button" onClick={() => setForm({...form, paymentMethod: 'Transfer Bank'})} className={`flex-1 py-2 rounded-lg border-2 font-bold text-sm flex items-center justify-center gap-2 transition ${form.paymentMethod === 'Transfer Bank' ? 'bg-blue-600 border-blue-600 text-white shadow' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100'}`}>
+                          <CreditCard className="w-4 h-4"/> TRANSFER BANK
+                        </button>
+                      </div>
+                    </div>
+                    <div className="md:col-span-2">
+                      {/* Tampilan Input berbeda antara Siswa vs Non-Siswa */}
+                      {form.studentId ? (
+                        <>
+                          <label className="text-xs font-bold text-slate-500 mb-2 block">KETERANGAN TAMBAHAN (OPSIONAL)</label>
+                          <input type="text" name="keterangan" value={form.keterangan} onChange={handleInput} placeholder="Misal: Lunas via Bank BSI" className="w-full p-2 border rounded bg-white" />
+                        </>
+                      ) : (
+                        <>
+                          <label className="text-xs font-bold text-slate-500 mb-2 block">DESKRIPSI TRANSAKSI UMUM</label>
+                          <input type="text" name="desc" value={form.desc} onChange={handleInput} placeholder="Misal: Pembelian ATK Kantor" className="w-full p-2 border rounded bg-white" required />
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* KONDISI 1: JIKA TRANSAKSI SISWA (MULTI TAGIHAN) */}
                   {form.studentId && (
-                    <div className="bg-slate-50 p-4 rounded-xl border">
-                      <h4 className="font-bold text-emerald-700 mb-4 flex items-center gap-2"><ShoppingCart className="w-4 h-4"/> Daftar Tagihan Aktif</h4>
+                    <div className="bg-white p-4 rounded-xl border border-emerald-100 shadow-inner">
+                      <h4 className="font-bold text-emerald-700 mb-4 flex items-center gap-2"><ShoppingCart className="w-4 h-4"/> Pilih Tagihan yang Dibayar</h4>
                       <div className="grid grid-cols-1 gap-3">
                         {billings.filter(b => String(b.studentId) === String(form.studentId) && b.status !== 'LUNAS' && b.status !== 'PAID').length > 0 ? (
                           billings.filter(b => String(b.studentId) === String(form.studentId) && b.status !== 'LUNAS' && b.status !== 'PAID').map(b => {
@@ -382,35 +414,36 @@ export default function App() {
                             return (
                               <div key={b.billingId} className={`flex flex-wrap items-center justify-between p-3 rounded-lg border-2 transition ${isSelected ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white'}`}>
                                 <div className="flex items-center gap-3">
-                                  <input type="checkbox" className="w-5 h-5 rounded" checked={!!isSelected} onChange={() => toggleBill(b)} />
+                                  <input type="checkbox" className="w-5 h-5 rounded cursor-pointer" checked={!!isSelected} onChange={() => toggleBill(b)} />
                                   <div>
-                                    <p className="font-bold text-sm">{b.category || 'Tagihan (Tanpa Kategori)'}</p>
+                                    <p className="font-bold text-sm text-slate-800">{b.category}</p>
                                     <p className="text-xs text-rose-500 font-mono">Sisa: Rp {fmtCurrency(sisaPiutang)}</p>
                                   </div>
                                 </div>
                                 {isSelected && (
                                   <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold">Bayar: Rp</span>
-                                    <input type="number" max={sisaPiutang} value={isSelected.payAmount} onChange={(e) => updatePayAmount(b.billingId, e.target.value)} className="w-32 p-1 border rounded font-bold text-emerald-700" />
+                                    <span className="text-xs font-bold text-slate-500">Ubah Nominal Bayar: Rp</span>
+                                    <input type="number" max={sisaPiutang} value={isSelected.payAmount} onChange={(e) => updatePayAmount(b.billingId, e.target.value)} className="w-32 p-1 border border-emerald-300 rounded font-bold text-emerald-700 text-right" />
                                   </div>
                                 )}
                               </div>
                             );
                           })
-                        ) : <p className="text-center text-slate-400 py-4 text-sm italic">Tidak ada tagihan yang harus dibayar (Lunas).</p>}
+                        ) : <p className="text-center text-slate-400 py-4 text-sm italic">Tidak ada tagihan aktif untuk siswa ini.</p>}
                       </div>
                       {selectedBills.length > 0 && (
-                        <div className="mt-6 pt-4 border-t flex justify-between items-center">
-                          <span className="font-bold text-slate-600">{selectedBills.length} Tagihan Terpilih</span>
+                        <div className="mt-6 pt-4 border-t border-emerald-100 flex justify-between items-center bg-emerald-50 p-4 rounded-lg">
+                          <span className="font-bold text-slate-600">{selectedBills.length} Tagihan Dipilih</span>
                           <div className="text-right">
-                            <p className="text-xs text-slate-500">Total Pembayaran</p>
-                            <p className="text-2xl font-bold text-emerald-600">Rp {fmtCurrency(selectedBills.reduce((s, x) => s + x.payAmount, 0))}</p>
+                            <p className="text-xs text-slate-500 uppercase font-bold">Total Pembayaran</p>
+                            <p className="text-3xl font-black text-emerald-600">Rp {fmtCurrency(selectedBills.reduce((s, x) => s + x.payAmount, 0))}</p>
                           </div>
                         </div>
                       )}
                     </div>
                   )}
 
+                  {/* KONDISI 2: JIKA TRANSAKSI UMUM (NON-SISWA) */}
                   {!form.studentId && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border">
                       <div><label className="text-xs font-bold text-slate-500">AKUN (COA)</label>
@@ -428,43 +461,53 @@ export default function App() {
                     </div>
                   )}
 
-                  <div className="flex justify-end gap-3">
-                    <button type="button" onClick={() => setShowForm(false)} className="px-6 py-2 border rounded-lg hover:bg-slate-50">Batal</button>
-                    <button type="submit" className="px-8 py-2 bg-slate-800 text-white rounded-lg font-bold shadow-lg hover:bg-slate-700">SIMPAN TRANSAKSI</button>
+                  <div className="flex justify-end gap-3 border-t pt-4">
+                    <button type="button" onClick={() => setShowForm(false)} className="px-6 py-2 border rounded-lg hover:bg-slate-50 font-medium">Batal</button>
+                    <button type="submit" className="px-8 py-2 bg-emerald-600 text-white rounded-lg font-bold shadow-lg hover:bg-emerald-700 transition">SIMPAN TRANSAKSI</button>
                   </div>
                 </form>
               )}
 
+              {/* TABEL JURNAL */}
               <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
                 <div className="overflow-x-auto">
                    <table className="w-full text-left text-sm whitespace-nowrap">
                      <thead className="bg-slate-50 border-b">
                        <tr>
-                         <th className="p-4 font-bold">TANGGAL</th>
-                         <th className="p-4 font-bold">REF</th>
-                         <th className="p-4 font-bold">DESKRIPSI</th>
-                         <th className="p-4 font-bold text-right">MASUK</th>
-                         <th className="p-4 font-bold text-right">KELUAR</th>
-                         <th className="p-4 font-bold text-center">AKSI</th>
+                         <th className="p-4 font-bold text-slate-600">TANGGAL</th>
+                         <th className="p-4 font-bold text-slate-600">REF</th>
+                         <th className="p-4 font-bold text-slate-600">DESKRIPSI</th>
+                         <th className="p-4 font-bold text-right text-slate-600">MASUK</th>
+                         <th className="p-4 font-bold text-right text-slate-600">KELUAR</th>
+                         <th className="p-4 font-bold text-center text-slate-600">AKSI</th>
                        </tr>
                      </thead>
                      <tbody className="divide-y">
-                       {transactions.slice().reverse().map((t, i) => (
-                         <tr key={i} className="hover:bg-slate-50 transition">
-                           <td className="p-4 font-mono text-xs text-slate-500">{t.date}</td>
-                           <td className="p-4 text-xs font-bold text-slate-400">{t.ref}</td>
-                           <td className="p-4">
-                             <div className="font-medium text-slate-700">{t.desc}</div>
-                             <div className="text-[10px] text-slate-400 font-mono">{coa.find(c => String(c.code) === String(t.coa))?.name || t.coa}</div>
-                           </td>
-                           <td className="p-4 text-right text-emerald-600 font-bold">{t.type === 'IN' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td>
-                           <td className="p-4 text-right text-rose-600 font-bold">{t.type === 'OUT' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td>
-                           <td className="p-4 text-center">
-                              {/* MEMPASSING SEMUA TRANSAKSI UNTUK DI-GROUPING DI STRUK FISIK */}
-                              {t.type === 'IN' && <PrintReceiptButton transaction={t} allTransactions={transactions} institution="MTs Ishlahul Amanah" students={students} />}
-                           </td>
-                         </tr>
-                       ))}
+                       {transactions.slice().reverse().map((t, i) => {
+                         // Format Tanggal untuk Tabel
+                         let tableDate = t.date;
+                         if (t.date && String(t.date).includes('T')) {
+                           tableDate = String(t.date).split('T')[0];
+                         }
+                         return (
+                           <tr key={i} className="hover:bg-slate-50 transition">
+                             <td className="p-4 font-mono text-xs text-slate-500">{tableDate}</td>
+                             <td className="p-4 text-xs font-bold text-slate-400">{t.ref}</td>
+                             <td className="p-4">
+                               <div className="font-medium text-slate-700">{t.desc}</div>
+                               <div className="flex gap-2 items-center mt-1">
+                                 <span className="text-[10px] text-slate-400 font-mono bg-slate-100 px-1 rounded">{coa.find(c => String(c.code) === String(t.coa))?.name || t.coa}</span>
+                                 {t.docRef && <span className="text-[10px] text-blue-500 font-medium bg-blue-50 px-1 rounded border border-blue-100">{t.docRef}</span>}
+                               </div>
+                             </td>
+                             <td className="p-4 text-right text-emerald-600 font-bold">{t.type === 'IN' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td>
+                             <td className="p-4 text-right text-rose-600 font-bold">{t.type === 'OUT' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td>
+                             <td className="p-4 text-center">
+                                {t.type === 'IN' && <PrintReceiptButton transaction={t} allTransactions={transactions} institution="MTs Ishlahul Amanah" students={students} />}
+                             </td>
+                           </tr>
+                         )
+                       })}
                      </tbody>
                    </table>
                 </div>
