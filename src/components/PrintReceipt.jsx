@@ -28,7 +28,7 @@ export function PrintReceiptButton({ transaction, allTransactions, institution, 
     try {
       const d = new Date(transaction.date);
       if(!isNaN(d.getTime())) {
-        displayDate = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        displayDate = d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
       } else if (transaction.date.includes('T')) {
         displayDate = transaction.date.split('T')[0];
       }
@@ -40,33 +40,56 @@ export function PrintReceiptButton({ transaction, allTransactions, institution, 
     printWindow.document.write(`
       <html>
         <head>
-          <title>Kwitansi ${transaction.ref}</title>
+          <title>Resi_${transaction.ref}</title>
           <style>
-            body { font-family: 'Courier New', Courier, monospace; padding: 20px; color: #000; max-width: 800px; margin: 0 auto; }
+            /* SETTING KHUSUS PRINTER DOT MATRIX & CONTINUOUS FORM */
+            @page { 
+              margin: 0; /* Menghilangkan margin bawaan browser */
+              size: auto; 
+            }
+            body { 
+              font-family: 'Courier New', Courier, monospace; /* Wajib monospace agar ketukan rapi */
+              font-size: 12px; 
+              color: #000; 
+              width: 100%;
+              max-width: 21cm; /* Lebar standar kertas continuous */
+              margin: 0;
+              padding: 10px 15px; /* Sedikit padding agar tidak mepet tepi robekan */
+              background: #fff;
+            }
+            /* Hilangkan semua elemen dekoratif yang membuat dot matrix lambat */
             .text-center { text-align: center; }
             .font-bold { font-weight: bold; }
-            .header { border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 15px; }
-            .title { font-size: 20px; margin: 0 0 5px 0; letter-spacing: 1px; }
-            .subtitle { font-size: 14px; margin: 0; }
-            table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 15px; }
-            td { padding: 4px 0; vertical-align: top; }
-            .col-label { width: 120px; }
-            .col-separator { width: 20px; text-align: center; }
-            .items-container { border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 15px 0; margin-bottom: 15px; }
-            .item-row { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; }
-            .total-row { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
-            .terbilang { font-style: italic; font-size: 13px; margin-bottom: 20px; }
-            .signatures { display: flex; justify-content: space-between; margin-top: 40px; font-size: 14px; }
-            .sign-box { text-align: center; width: 200px; }
-            .sign-line { border-top: 1px solid #000; margin-top: 60px; padding-top: 5px; }
-            .footer-notes { font-size: 10px; color: #555; margin-top: 30px; }
+            .header { border-bottom: 1px dashed #000; padding-bottom: 5px; margin-bottom: 10px; }
+            .title { font-size: 16px; margin: 0 0 5px 0; letter-spacing: 1px; }
+            .subtitle { font-size: 12px; margin: 0; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 10px; }
+            td { padding: 2px 0; vertical-align: top; }
+            .col-label { width: 90px; }
+            .col-separator { width: 15px; text-align: center; }
+            
+            .items-container { border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 10px 0; margin-bottom: 10px; }
+            .item-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+            
+            .total-row { font-size: 14px; font-weight: bold; margin-bottom: 5px; }
+            .terbilang { font-style: italic; font-size: 11px; margin-bottom: 15px; }
+            
+            .signatures { display: flex; justify-content: space-between; margin-top: 20px; font-size: 12px; }
+            .sign-box { text-align: center; width: 150px; }
+            .sign-line { border-top: 1px dashed #000; margin-top: 50px; padding-top: 5px; }
+            
+            .footer-notes { font-size: 10px; margin-top: 20px; }
+            
+            /* Sembunyikan elemen ini saat benar-benar dicetak di kertas */
+            @media print {
+              html, body { height: auto; }
+            }
           </style>
         </head>
         <body>
           <div class="header text-center">
             <h1 class="title">KWITANSI PEMBAYARAN</h1>
-            <p class="subtitle font-bold">Madrasah Tsanawiyah<br>${institution}</p>
-            <p class="subtitle" style="font-size: 12px;">Pangalengan, Kab. Bandung</p>
+            <p class="subtitle font-bold">${institution.toUpperCase()}</p>
           </div>
 
           <table>
@@ -74,17 +97,15 @@ export function PrintReceiptButton({ transaction, allTransactions, institution, 
             <tr><td class="col-label">Tanggal</td><td class="col-separator">:</td><td>${displayDate}</td></tr>
             <tr><td class="col-label">Nama</td><td class="col-separator">:</td><td class="font-bold">${studentName}</td></tr>
             <tr><td class="col-label">Kelas</td><td class="col-separator">:</td><td>${studentClass}</td></tr>
-            <tr><td class="col-label">Pembayaran</td><td class="col-separator">:</td><td class="font-bold">${paymentMethod}</td></tr>
+            <tr><td class="col-label">Cara Bayar</td><td class="col-separator">:</td><td class="font-bold">${paymentMethod}</td></tr>
           </table>
 
           <div class="items-container">
-            <div class="font-bold" style="margin-bottom: 10px; font-size: 12px; color: #555;">RINCIAN PEMBAYARAN:</div>
             ${relatedTx.map((t, index) => {
-              // Menghapus tulisan " - Nama Siswa" agar cetakan rincian terlihat lebih bersih
               const cleanDesc = t.desc.split(' - ')[0];
               return `
               <div class="item-row">
-                <span style="flex: 1;">${index + 1}. ${cleanDesc}</span>
+                <span style="flex: 1; padding-right: 10px;">${index + 1}. ${cleanDesc}</span>
                 <span>Rp ${new Intl.NumberFormat('id-ID').format(t.amount)}</span>
               </div>
             `}).join('')}
@@ -94,7 +115,7 @@ export function PrintReceiptButton({ transaction, allTransactions, institution, 
             JUMLAH: Rp ${new Intl.NumberFormat('id-ID').format(total)}
           </div>
           <div class="terbilang">
-            Terbilang: ${terbilang(total)} Rupiah
+            # ${terbilang(total)} Rupiah #
           </div>
 
           <div class="signatures">
@@ -109,23 +130,23 @@ export function PrintReceiptButton({ transaction, allTransactions, institution, 
           </div>
 
           <div class="footer-notes">
-            <p><strong>Catatan:</strong></p>
-            <ol style="margin-top: 5px; padding-left: 15px;">
-              <li>Semua biaya bersifat non-refundable (tidak dapat dikembalikan).</li>
-              <li>Simpanlah kuitansi ini sebagai bukti pembayaran yang sah.</li>
-              <li>Dicetak otomatis oleh Sistem ISAK 35.</li>
-            </ol>
+            <p>1. Biaya bersifat non-refundable.<br>2. Dicetak otomatis oleh Sistem.</p>
           </div>
         </body>
       </html>
     `);
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
+    
+    // Memberikan jeda sedikit lebih lama agar spooler printer Dot Matrix siap menerima data
+    setTimeout(() => { 
+      printWindow.print(); 
+      printWindow.close(); 
+    }, 800);
   };
 
   return (
-    <button onClick={handlePrint} className="p-2 text-emerald-600 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition text-xs font-bold flex items-center gap-2" title="Cetak Kuitansi Gabungan">
+    <button onClick={handlePrint} className="p-2 text-emerald-600 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition text-xs font-bold flex items-center gap-2" title="Cetak Kuitansi Epson LX">
       <Printer className="w-4 h-4" /> Cetak
     </button>
   );
