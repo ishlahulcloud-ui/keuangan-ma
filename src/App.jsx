@@ -81,7 +81,7 @@ function LoginPage(props) {
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
         <img src={logoMA} alt="Logo" className="w-24 h-24 mx-auto mb-6 object-contain" />
-        <h1 className="text-2xl font-bold text-slate-800 mb-2">Sistem Keuangan MA Ishlahul Amanah</h1>
+        <h1 className="text-2xl font-bold text-slate-800 mb-2">Sistem Keuangan ISAK 35</h1>
         <p className="text-slate-500 mb-8">MA Ishlahul Amanah</p>
         <div id="google-signin-btn" className="flex justify-center"></div>
         {error && <p className="text-rose-500 mt-4 text-sm">{error}</p>}
