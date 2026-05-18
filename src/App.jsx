@@ -376,7 +376,7 @@ export default function App() {
                     </ResponsiveContainer>
                   </div>
                </div>
-            </div>
+           
                            {/* GRAFIK BARU: TREN ARUS KAS HARIAN REAL-TIME */}
                <div className="bg-white p-6 rounded-xl shadow-sm border">
                   <div className="flex justify-between items-center mb-4">
@@ -415,7 +415,7 @@ export default function App() {
                     </ResponsiveContainer>
                   </div>
                </div>
-
+          </div>
           )}
 
           {tab === 'jurnal' && (
