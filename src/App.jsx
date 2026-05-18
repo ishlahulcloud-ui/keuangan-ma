@@ -415,7 +415,7 @@ export default function App() {
                   </div>
                </div>
              </div>  
-            )}
+           )}
 
           {tab === 'jurnal' && (
             <div className="space-y-6 max-w-7xl mx-auto">
