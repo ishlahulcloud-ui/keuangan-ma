@@ -8,7 +8,7 @@ import {
   AlertCircle, Lock, DollarSign, Users, FileBarChart, Save, LogOut, RefreshCw, ShoppingCart, CreditCard
 } from 'lucide-react';
 
-import logoMA from './assets/logo-MA.png';
+import logoMts from './assets/logo-baru.png';
 import { PrintReceiptButton } from './components/PrintReceipt';
 import { LaporanBulananButton } from './components/LaporanBulananPDF';
 
@@ -80,9 +80,9 @@ function LoginPage(props) {
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
-        <img src={logoMA} alt="Logo" className="w-24 h-24 mx-auto mb-6 object-contain" />
+        <img src={logoMts} alt="Logo" className="w-24 h-24 mx-auto mb-6 object-contain" />
         <h1 className="text-2xl font-bold text-slate-800 mb-2">Sistem Keuangan ISAK 35</h1>
-        <p className="text-slate-500 mb-8">MA Ishlahul Amanah</p>
+        <p className="text-slate-500 mb-8">MTs Ishlahul Amanah</p>
         <div id="google-signin-btn" className="flex justify-center"></div>
         {error && <p className="text-rose-500 mt-4 text-sm">{error}</p>}
       </div>
@@ -269,8 +269,8 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 flex font-sans text-slate-800">
       <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col">
         <div className="p-6 border-b border-slate-800 flex items-center gap-3">
-          <img src={logoMA} className="w-8 h-8 object-contain" alt="Logo" />
-          <div><h1 className="font-bold text-lg leading-tight">MA Ishlahul Amanah</h1><p className="text-xs text-slate-400">Sistem Keuangan Web</p></div>
+          <img src={logoMts} className="w-8 h-8 object-contain" alt="Logo" />
+          <div><h1 className="font-bold text-lg leading-tight">MTs Ishlahul Amanah</h1><p className="text-xs text-slate-400">Sistem Keuangan Web</p></div>
         </div>
         <nav className="flex-1 p-4 space-y-1">
           <NB icon={<LayoutDashboard />} label="Dashboard" a={tab === 'dashboard'} oc={() => setTab('dashboard')} />
@@ -359,7 +359,7 @@ export default function App() {
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-bold">Jurnal Umum</h3>
                 <div className="flex gap-2">
-                  <LaporanBulananButton transactions={transactions} coaList={coa} rkamList={rkam} institution="MA Ishlahul Amanah" userRole={user.role} userName={user.name} />
+                  <LaporanBulananButton transactions={transactions} coaList={coa} rkamList={rkam} institution="MTs Ishlahul Amanah" userRole={user.role} userName={user.name} />
                   <button onClick={() => setShowForm(!showForm)} className="bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"><Plus className="w-4 h-4" /> Entri Baru</button>
                 </div>
               </div>
@@ -508,7 +508,7 @@ export default function App() {
                              <td className="p-4 text-right text-emerald-600 font-bold">{t.type === 'IN' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td>
                              <td className="p-4 text-right text-rose-600 font-bold">{t.type === 'OUT' ? 'Rp ' + fmtCurrency(t.amount) : '-'}</td>
                              <td className="p-4 text-center">
-                                {t.type === 'IN' && <PrintReceiptButton transaction={t} allTransactions={transactions} institution="MA Ishlahul Amanah" students={students} />}
+                                {t.type === 'IN' && <PrintReceiptButton transaction={t} allTransactions={transactions} institution="MTs Ishlahul Amanah" students={students} />}
                              </td>
                            </tr>
                          )
