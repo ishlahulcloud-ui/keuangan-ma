@@ -375,9 +375,10 @@ export default function App() {
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
+               </div>
            
-                  {/* GRAFIK BARU: TREN ARUS KAS HARIAN REAL-TIME */}
-                  <div className="bg-white p-6 rounded-xl shadow-sm border">
+               {/* GRAFIK BARU: TREN ARUS KAS HARIAN REAL-TIME */}
+               <div className="bg-white p-6 rounded-xl shadow-sm border">
                   <div className="flex justify-between items-center mb-4">
                      <div>
                         <h3 className="font-bold text-slate-800">Aktivitas Arus Kas Harian (Real-Time)</h3>
@@ -414,8 +415,8 @@ export default function App() {
                     </ResponsiveContainer>
                   </div>
                </div>
-             </div>  
-           )}
+            </div>
+          )}
 
           {tab === 'jurnal' && (
             <div className="space-y-6 max-w-7xl mx-auto">
