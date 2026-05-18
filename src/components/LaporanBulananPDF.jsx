@@ -117,7 +117,7 @@ export function LaporanBulananButton({ transactions, coaList, rkamList, institut
           
           <div class="kop-surat">
             <p class="kop-title">YAYASAN ISHLAHUL AMANAH</p>
-            <p class="kop-subtitle">MTs Ishlahul Amanah Pangalengan, Kab. Bandung</p>
+            <p class="kop-subtitle">MA Ishlahul Amanah Pangalengan, Kab. Bandung</p>
             <p class="kop-subtitle" style="font-weight: bold; font-size: 15px; margin-top: 10px; color: #0f172a;">RINGKASAN EKSEKUTIF & ANALISIS KEUANGAN STRATEGIS</p>
             <p class="kop-subtitle" style="font-style: italic;">Periode Laporan: ${namaBulanIndo}</p>
           </div>
@@ -169,7 +169,7 @@ export function LaporanBulananButton({ transactions, coaList, rkamList, institut
 
           <div class="page-break"></div>
           <div class="kop-surat">
-            <p class="kop-title">MTs ISHLAHUL AMANAH</p>
+            <p class="kop-title">MA ISHLAHUL AMANAH</p>
             <p class="kop-subtitle">LAPORAN AKTIVITAS (ISAK 35)</p>
             <p class="kop-subtitle">Untuk Periode yang Berakhir pada: ${namaBulanIndo}</p>
           </div>
@@ -261,7 +261,7 @@ export function LaporanBulananButton({ transactions, coaList, rkamList, institut
           <div class="footer-notes">
             <p><strong>Keterangan Lampiran Teknikal:</strong></p>
             <p style="margin:0; font-size:11px;">1. Laporan ini dicetak berdasarkan data mutasi riil Jurnal Umum yang divalidasi oleh sistem awan (Cloud).</p>
-            <p style="margin:0; font-size:11px;">2. Pengelompokan akun mematuhi Bagan Akun Standar Entitas Non-Laba Keagamaan dan Pendidikan Yayasan MTs Ishlahul Amanah.</p>
+            <p style="margin:0; font-size:11px;">2. Pengelompokan akun mematuhi Bagan Akun Standar Entitas Non-Laba Keagamaan dan Pendidikan Yayasan MA Ishlahul Amanah.</p>
           </div>
 
         </body>

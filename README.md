@@ -1,2 +1,2 @@
 # keungan-madrasah
-# keuangan-mts
+# keuangan-MA
