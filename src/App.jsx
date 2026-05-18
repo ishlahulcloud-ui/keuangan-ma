@@ -620,12 +620,14 @@ export default function App() {
                      <input id="genAmount" type="number" placeholder="Nominal Total" className="w-full p-2 border rounded mt-1 bg-slate-50" />
                    </div>
                    <button 
-                     onClick={() => handleGenerateBilling({
-                       category: document.getElementById('genCat').value,
-                       targetClass: document.getElementById('genTarget').value,
-                       amount: document.getElementById('genAmount').value,
-                       month: new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })
-                     })}
+                     onClick={() => {
+                       handleGenerateBilling({
+                         category: document.getElementById('genCat').value,
+                         targetClass: document.getElementById('genTarget').value,
+                         amount: document.getElementById('genAmount').value,
+                         month: new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })
+                       });
+                     }}
                      className="bg-emerald-600 text-white p-2 rounded font-bold hover:bg-emerald-700 flex items-center justify-center gap-2"
                    >
                      <Plus className="w-4 h-4"/> Proses Tagihan Massal
