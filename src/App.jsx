@@ -546,9 +546,9 @@ export default function App() {
                      <label className="text-[10px] font-bold text-slate-500 uppercase">Target Kelas</label>
                      <select id="genTarget" className="w-full p-2 border rounded mt-1 bg-slate-50">
                        <option value="ALL">Semua Kelas</option>
-                       <option value="7">Kelas 7 (VII)</option>
-                       <option value="8">Kelas 8 (VIII)</option>
-                       <option value="9">Kelas 9 (IX)</option>
+                       <option value="10">Kelas 10 (X)</option>
+                       <option value="11">Kelas 11 (XI)</option>
+                       <option value="12">Kelas 12 (XII)</option>
                      </select>
                    </div>
                    <div>
