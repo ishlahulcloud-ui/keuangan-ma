@@ -224,10 +224,21 @@ export default function App() {
     var rd = rkam.map(r => ({ code: r.code, name: r.name, budget: Number(r.budget), realization: 0, q1: 0, q2: 0, q3: 0, q4: 0 }));
     var qd = { Q1: { i: 0, o: 0 }, Q2: { i: 0, o: 0 }, Q3: { i: 0, o: 0 }, Q4: { i: 0, o: 0 } };
     
+    // Objek sementara untuk mengelompokkan data harian
+    var dailyMap = {};
+
     transactions.forEach(t => {
       var a = Number(t.amount || 0);
       var q = t.quarter || getQuarter(t.date);
       var rest = t.restriction && t.restriction !== 'unrestricted';
+      
+      // Format tanggal bersih (YYYY-MM-DD)
+      var tDate = t.date ? String(t.date).split('T')[0] : 'Tanpa Tanggal';
+
+      // Inisialisasi map harian jika belum ada
+      if (!dailyMap[tDate]) {
+        dailyMap[tDate] = { tanggal: tDate, masuk: 0, keluar: 0 };
+      }
 
       if (t.type === 'IN') {
         income += a;
@@ -237,10 +248,14 @@ export default function App() {
         if (String(t.coa) === '4200') usaha += a;
         if (String(t.coa) === '4300') donasi += a;
         if (String(t.coa) === '4301' || String(t.coa) === '4302') donasiR += a;
+        
+        dailyMap[tDate].masuk += a; // Tambah ke kas masuk harian
       } else {
         expense += a;
         if (rest) expR += a;
         if (qd[q]) qd[q].o += a;
+        
+        dailyMap[tDate].keluar += a; // Tambah ke kas keluar harian
       }
       
       if (t.rkam) { 
@@ -249,11 +264,20 @@ export default function App() {
       }
     });
 
+    // Ubah objek map harian menjadi array dan urutkan berdasarkan tanggal terlama ke terbaru
+    var dailyChartData = Object.values(dailyMap).sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+    
+    // Batasi grafik harian hanya menampilkan 15 hari transaksi terakhir agar tidak terlalu padat
+    if (dailyChartData.length > 15) {
+      dailyChartData = dailyChartData.slice(-15);
+    }
+
     return {
       balance: income - expense, income: income, expense: expense,
       surplus: income - expense, surplusUnrestricted: (income - incR) - (expense - expR),
       totalInRestricted: incR, totalOutRestricted: expR,
       rkamData: rd,
+      dailyFlow: dailyChartData, // Data baru untuk grafik harian
       incData: [
         { name: 'SPP/Pangkal', value: spp }, { name: 'Unit Usaha', value: usaha },
         { name: 'Donasi', value: donasi }, { name: 'Donasi Terikat', value: donasiR }
@@ -261,6 +285,7 @@ export default function App() {
       cashFlow: ['Q1', 'Q2', 'Q3', 'Q4'].map(q => ({ quarter: q, masuk: qd[q].i, keluar: qd[q].o, saldo: qd[q].i - qd[q].o }))
     };
   }, [transactions, rkam]);
+
 
   if (!user) return <LoginPage onLogin={u => { setUser(u); localStorage.setItem('madrasah_user', JSON.stringify(u)); }} />;
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><RefreshCw className="animate-spin w-10 h-10 text-emerald-600" /></div>;
@@ -352,6 +377,45 @@ export default function App() {
                   </div>
                </div>
             </div>
+                           {/* GRAFIK BARU: TREN ARUS KAS HARIAN REAL-TIME */}
+               <div className="bg-white p-6 rounded-xl shadow-sm border">
+                  <div className="flex justify-between items-center mb-4">
+                     <div>
+                        <h3 className="font-bold text-slate-800">Aktivitas Arus Kas Harian (Real-Time)</h3>
+                        <p className="text-xs text-slate-400">Memantau pergerakan uang masuk dan keluar per tanggal transaksi (15 hari aktif terakhir)</p>
+                     </div>
+                     <span className="text-[10px] bg-emerald-50 text-emerald-600 font-bold px-2 py-1 rounded border border-emerald-200 animate-pulse">● LIVE UPDATE</span>
+                  </div>
+                  <div className="h-64">
+                    <ResponsiveContainer>
+                      <AreaChart data={analytics.dailyFlow}>
+                        <defs>
+                          <linearGradient id="colorMasuk" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorKeluar" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2}/>
+                            <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="tanggal" tickFormatter={v => {
+                           try {
+                             const d = new Date(v);
+                             return !isNaN(d.getTime()) ? d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : v;
+                           } catch(e) { return v; }
+                        }} style={{ fontSize: '11px', fontFamily: 'monospace' }} />
+                        <YAxis tickFormatter={v => 'Rp ' + (v >= 1000000 ? (v / 1000000) + 'jt' : v >= 1000 ? (v / 1000) + 'rb' : v)} style={{ fontSize: '11px' }} />
+                        <RechartsTooltip formatter={v => 'Rp ' + new Intl.NumberFormat('id-ID').format(v)} />
+                        <Legend />
+                        <Area type="monotone" dataKey="masuk" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorMasuk)" name="Uang Masuk (Penerimaan)" />
+                        <Area type="monotone" dataKey="keluar" stroke="#ef4444" strokeWidth={2} fillOpacity={1} fill="url(#colorKeluar)" name="Uang Keluar (Beban)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+               </div>
+
           )}
 
           {tab === 'jurnal' && (
